@@ -1,0 +1,66 @@
+/* Page container */
+.inventory-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Back button */
+.inventory-container button {
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  border: none;
+  background-color: #2563eb;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.inventory-container button:hover {
+  background-color: #1e40af;
+}
+
+/* Table wrapper for horizontal scroll */
+.inventory-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* Table styling */
+.inventory-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* Table header */
+.inventory-table thead {
+  background-color: #f3f4f6;
+}
+
+.inventory-table th {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+/* Table body */
+.inventory-table td {
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+/* Zebra rows */
+.inventory-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* Hover effect */
+.inventory-table tbody tr:hover {
+  background-color: #e0f2fe;
+}
