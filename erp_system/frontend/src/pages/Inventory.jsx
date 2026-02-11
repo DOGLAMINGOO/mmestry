@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api';
 import '../styles/Inventory.css'
 
 function Inventory() {
+    const navigate = useNavigate();
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -317,9 +319,26 @@ function Inventory() {
                     </thead>
                     <tbody>
                         {inventory.map(item => (
-                            <tr key={item.id}>
+                            <tr 
+                                key={item.id}
+                                style={{ cursor: 'default' }}
+                            >
                                 <td>{item.company_name}</td>
-                                <td>{item.part_name}</td>
+                                <td>
+                                    <span 
+                                        onClick={() => navigate(`/inventory/${item.id}`)}
+                                        style={{ 
+                                            cursor: 'pointer',
+                                            color: '#2563eb',
+                                            textDecoration: 'none',
+                                            transition: 'text-decoration 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                                    >
+                                        {item.part_name}
+                                    </span>
+                                </td>
                                 <td>{item.blanks_qty}</td>
                                 <td>{item.finished_qty}</td>
                                 <td>{item.reserved_qty}</td>

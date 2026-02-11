@@ -15,5 +15,4 @@ urlpatterns = [
     
     
     path('api/', include('api.urls')),
-    path('', include('inventory.urls')),
 ]

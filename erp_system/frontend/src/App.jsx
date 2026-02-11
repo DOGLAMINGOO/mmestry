@@ -5,6 +5,7 @@ import Register from './pages/Register.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
 import Inventory from './pages/Inventory.jsx'
+import InventoryDetail from './pages/InventoryDetail.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 
@@ -40,6 +41,14 @@ function App() {
             <ProtectedRoute>
               <Inventory />
             </ProtectedRoute>} />
+          <Route 
+            path='/inventory/:id'
+            element={
+              <ProtectedRoute>
+                <InventoryDetail />
+              </ProtectedRoute>
+            }
+          />
           <Route path='*' element={<NotFound />} />
         </Routes>
       </BrowserRouter>
