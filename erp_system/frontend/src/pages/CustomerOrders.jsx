@@ -10,6 +10,8 @@ function CustomerOrders() {
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [ordersError, setOrdersError] = useState(null);
 
+    const [userRole, setUserRole] = useState(null);
+
     const fetchOrders = async () => {
         setOrdersLoading(true);
         setOrdersError(null);
@@ -28,15 +30,29 @@ function CustomerOrders() {
         fetchOrders();
     }, []);
 
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const res = await api.get('/api/user/me/');
+                setUserRole(res.data.role || null);
+            } catch (err) {
+                // ignore unauthenticated
+            }
+        };
+        fetchUser();
+    }, []);
+
     return (
         <div className="inventory-container">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                 <button type="button" onClick={() => navigate('/')}>
                     Back to Home
                 </button>
-                <button type="button" onClick={() => navigate('/customer-orders/new')}>
-                    Create New Order
-                </button>
+                {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
+                    <button type="button" onClick={() => navigate('/customer-orders/new')}>
+                        Create New Order
+                    </button>
+                )}
             </div>
             <h1>Customer Orders</h1>
 

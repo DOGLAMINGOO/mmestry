@@ -22,20 +22,27 @@ function CreateCustomerOrder() {
 
     const [submitting, setSubmitting] = useState(false);
 
+    const [userRole, setUserRole] = useState(null);
+    const [loadingRole, setLoadingRole] = useState(true);
+
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [companiesRes, clientsRes, partsRes] = await Promise.all([
+                const [companiesRes, clientsRes, partsRes, userRes] = await Promise.all([
                     api.get('/api/companies/'),
                     api.get('/api/clients/'),
                     api.get('/api/parts/'),
+                    api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
                 setCompanies(companiesRes.data);
                 setClients(clientsRes.data);
                 setParts(partsRes.data);
+                setUserRole(userRes.data.role);
             } catch (err) {
-                console.error('Failed to load select options', err);
+                console.error('Failed to load select options or user role', err);
                 alert('Failed to load companies/clients/parts. Please refresh.');
+            } finally {
+                setLoadingRole(false);
             }
         };
 
@@ -84,6 +91,22 @@ function CreateCustomerOrder() {
             setSubmitting(false);
         }
     };
+
+    if (loadingRole) {
+        return <div>Loading...</div>;
+    }
+
+    if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
+        return (
+            <div className="inventory-container">
+                <button type="button" onClick={() => navigate('/customer-orders')} style={{ marginBottom: 16 }}>
+                    Back to Orders
+                </button>
+                <h2>Unauthorized</h2>
+                <p>You do not have permission to create customer orders.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="inventory-container">
