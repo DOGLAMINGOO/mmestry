@@ -6,6 +6,8 @@ import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
 import Inventory from './pages/Inventory.jsx'
 import InventoryDetail from './pages/InventoryDetail.jsx'
+import CustomerOrders from './pages/CustomerOrders.jsx'
+import CreateCustomerOrder from './pages/CreateCustomerOrder.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 
@@ -41,6 +43,22 @@ function App() {
             <ProtectedRoute>
               <Inventory />
             </ProtectedRoute>} />
+          <Route
+            path='/customer-orders'
+            element={
+              <ProtectedRoute>
+                <CustomerOrders />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/customer-orders/new'
+            element={
+              <ProtectedRoute>
+                <CreateCustomerOrder />
+              </ProtectedRoute>
+            }
+          />
           <Route 
             path='/inventory/:id'
             element={

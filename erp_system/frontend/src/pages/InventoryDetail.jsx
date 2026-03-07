@@ -15,7 +15,7 @@ function InventoryDetail() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const resp = await api.get(`/api/inventory/${id}`);
+                const resp = await api.get(`/api/inventory/${id}/`);
                 const invItem = resp.data;
                 setItem(invItem);
 
@@ -25,7 +25,7 @@ function InventoryDetail() {
                 setPart(foundPart);
 
                 // Fetch all inventory to determine which companies have this part
-                const allInv = await api.get('/api/inventory');
+                const allInv = await api.get('/api/inventory/');
                 const samePart = allInv.data.filter(i => i.part === invItem.part);
 
                 // Fetch companies to get codes (A/B) and names

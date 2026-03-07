@@ -30,6 +30,7 @@ for a gear manufacturing business.
 - Frontend: Web (tablet-friendly)
 
 #Usernames and Passwords of the users
-#kaustubh mestry01
-#John doe01
-#dogla mingo01
+#admin admin01
+#Manager1 mmestryman01
+#Manager2 mmestryman02
+#Stock-Manager mmestrysm01

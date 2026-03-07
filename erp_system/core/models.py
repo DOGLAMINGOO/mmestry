@@ -7,7 +7,15 @@ class Company(models.Model):
 
     def __str__(self):
         return f"{self.name} - {self.code}"
+
+
+class Client(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+
+    def __str__(self):
+        return self.name
     
+
 class Part(models.Model):
     part_number = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=200)

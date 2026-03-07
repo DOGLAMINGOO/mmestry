@@ -7,12 +7,33 @@ from .models import Inventory
 class InventorySerializer(serializers.ModelSerializer):
     part_name = serializers.CharField(source="part.name", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
-    added_by = serializers.SerializerMethodField()
-    updated_by = serializers.SerializerMethodField()
+    # replaced added_by/updated_by with last adjustment info (annotated in queryset)
+    last_adjusted_by = serializers.CharField(read_only=True)
+    last_adjusted_at = serializers.DateTimeField(read_only=True)
+    # available_qty/ reserved removed for now
 
     class Meta:
         model = Inventory
-        fields = "__all__"
+        # expose only necessary fields; quantities are read-only
+        fields = (
+            "id",
+            "company",
+            "company_name",
+            "part",
+            "part_name",
+            "blanks_qty",
+            "finished_qty",
+            "is_active",
+            "last_adjusted_by",
+            "last_adjusted_at",
+        )
+        read_only_fields = (
+            "blanks_qty",
+            "finished_qty",
+            "is_active",
+            "last_adjusted_by",
+            "last_adjusted_at",
+        )
         # We implement our own unique-together check so updates work cleanly.
         validators = []
 
@@ -43,25 +64,20 @@ class InventorySerializer(serializers.ModelSerializer):
 
         return data
 
-    def _get_log_user(self, obj, action_flag):
-        ct = ContentType.objects.get_for_model(Inventory)
-        entry = (
-            LogEntry.objects.filter(
-                content_type=ct,
-                object_id=str(obj.pk),
-                action_flag=action_flag,
-            )
-            .select_related("user")
-            .order_by("-action_time")
-            .first()
-        )
-        if not entry or not entry.user:
-            return None
-        return entry.user.get_username()
+    # `last_adjusted_by` and `last_adjusted_at` are provided by queryset annotations
 
-    def get_added_by(self, obj):
-        return self._get_log_user(obj, ADDITION)
+    def create(self, validated_data):
+        # Prevent clients from setting quantities or is_active during creation.
+        # Ensure blanks_qty/finished_qty default to model defaults (0).
+        for field in ("blanks_qty", "finished_qty", "is_active"):
+            validated_data.pop(field, None)
 
-    def get_updated_by(self, obj):
-        # If never updated, this may be None; frontend can display '-'
-        return self._get_log_user(obj, CHANGE)
+        # validated_data should only contain company and part (and any allowed fields)
+        return Inventory.objects.create(**validated_data)
+
+    def update(self, instance, validated_data):
+        # Prevent manual edits to quantity and is_active via API
+        for field in ("blanks_qty", "finished_qty", "is_active"):
+            if field in validated_data:
+                validated_data.pop(field, None)
+        return super().update(instance, validated_data)

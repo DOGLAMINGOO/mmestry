@@ -10,18 +10,9 @@ function Inventory() {
     const [error, setError] = useState(null);
     const [companies, setCompanies] = useState([]);
     const [parts, setParts] = useState([]);
-    
-    // Form state
-    const [formData, setFormData] = useState({
-        company: '',
-        part: '',
-        blanks_qty: '',
-        finished_qty: '',
-        reserved_qty: '',
-    });
-    const [editingId, setEditingId] = useState(null);
-    const [formError, setFormError] = useState(null);
-    const [submitting, setSubmitting] = useState(false);
+
+    // Frontend state
+    const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
         getInventory();
@@ -49,7 +40,7 @@ function Inventory() {
     
     const getInventory = async () => {
         try {
-            const response = await api.get('/api/inventory');
+            const response = await api.get('/api/inventory/');
             setInventory(response.data);
             setLoading(false);
         } catch (err) {
@@ -58,107 +49,59 @@ function Inventory() {
         }
     };
 
-    const handleInputChange = (e) => {
+    // Adjust modal state
+    const [adjustModalOpen, setAdjustModalOpen] = useState(false);
+    const [adjustItem, setAdjustItem] = useState(null);
+    const [adjustForm, setAdjustForm] = useState({ field: 'finished', action: 'increase', quantity: 1, reason: '' });
+
+    const openAdjust = (item) => {
+        setAdjustItem(item);
+        setAdjustForm({ field: 'finished', action: 'increase', quantity: 1, reason: '' });
+        setAdjustModalOpen(true);
+    };
+
+    const closeAdjust = () => {
+        setAdjustModalOpen(false);
+        setAdjustItem(null);
+    };
+
+    const handleAdjustChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            // Keep raw string so user can clear the field;
-            // we'll convert to numbers on submit.
-            [name]: value,
-        }));
-        setFormError(null);
+        setAdjustForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-        'Are you sure you want to delete this inventory record?'
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-        await api.delete(`/api/inventory/delete/${id}/`);
-        await getInventory(); // refresh list
-    } catch (err) {
-        alert('Failed to delete inventory item.');
-        console.error(err);
-    }
-};
-
-
-    const handleEditClick = (item) => {
-        setEditingId(item.id);
-        setFormError(null);
-        setFormData({
-            company: item.company,
-            part: item.part,
-            blanks_qty: item.blanks_qty?.toString() ?? '',
-            finished_qty: item.finished_qty?.toString() ?? '',
-            reserved_qty: item.reserved_qty?.toString() ?? '',
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleCancelEdit = () => {
-        setEditingId(null);
-        setFormError(null);
-        setFormData({
-            company: '',
-            part: '',
-            blanks_qty: '',
-            finished_qty: '',
-            reserved_qty: '',
-        });
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setFormError(null);
-        setSubmitting(true);
+    const submitAdjust = async () => {
+        const { field, action, quantity, reason } = adjustForm;
+        const qty = parseInt(quantity, 10);
+        if (!['blanks', 'finished'].includes(field)) return alert('Invalid field');
+        if (!['increase', 'decrease'].includes(action)) return alert('Invalid action');
+        if (isNaN(qty) || qty <= 0) return alert('Quantity must be a positive integer');
+        if (!reason || reason.trim() === '') return alert('Reason is required');
 
         try {
-            // Convert quantity strings to numbers for submission; default to 0
-            const submitData = {
-                ...formData,
-                blanks_qty: formData.blanks_qty === '' ? 0 : parseInt(formData.blanks_qty, 10) || 0,
-                finished_qty: formData.finished_qty === '' ? 0 : parseInt(formData.finished_qty, 10) || 0,
-                reserved_qty: formData.reserved_qty === '' ? 0 : parseInt(formData.reserved_qty, 10) || 0,
-            };
-
-            if (editingId) {
-                await api.put(`/api/inventory/${editingId}`, submitData);
-            } else {
-                await api.post('/api/inventory', submitData);
-            }
-            // Reset form
-            setEditingId(null);
-            setFormData({
-                company: '',
-                part: '',
-                blanks_qty: '',
-                finished_qty: '',
-                reserved_qty: '',
-            });
-            // Refresh inventory list
+            await api.post(`/api/inventory/${adjustItem.id}/adjust/`, { field, action, quantity: qty, reason });
             await getInventory();
+            closeAdjust();
+            alert('Adjustment successful');
         } catch (err) {
-            if (err.response?.data) {
-                // Handle unique together constraint error
-                const errorData = err.response.data;
-                if (errorData.non_field_errors || 
-                    (errorData.company && errorData.part) ||
-                    errorData.detail) {
-                    setFormError('This company and part combination already exists. Each company can only have one inventory entry per part.');
-                } else {
-                    setFormError(err.response.data.detail || 'Failed to create inventory. Please check your input.');
-                }
-            } else {
-                setFormError('Failed to create inventory. Please try again.');
-            }
-        } finally {
-            setSubmitting(false);
+            const msg = err.response?.data?.detail || JSON.stringify(err.response?.data) || 'Adjustment failed';
+            alert(msg);
+            console.error(err);
         }
     };
+
+    // fetch current user to determine role-based permissions
+    useEffect(() => {
+        const fetchUser = async () => {
+            try{
+                const res = await api.get('/api/user/me/');
+                setUserRole(res.data.role || null);
+            }catch(err){
+                // ignore unauthenticated
+            }
+        };
+        fetchUser();
+    }, []);
 
 
 
@@ -170,135 +113,7 @@ function Inventory() {
             <a href='/'><button>Go to home page</button></a>
                 <h1>Inventory</h1>
             
-            {/* Add Inventory Form */}
-            <div style={{ marginBottom: '20px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
-                <h2>{editingId ? 'Edit Inventory' : 'Add New Inventory'}</h2>
-                <form onSubmit={handleSubmit}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', columnGap: '24px', rowGap: '15px', marginBottom: '15px' }}>
-                        <div>
-                            <label htmlFor="company" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Company</label>
-                            <select
-                                id="company"
-                                name="company"
-                                value={formData.company}
-                                onChange={handleInputChange}
-                                required
-                                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                            >
-                                <option value="">Select Company</option>
-                                {companies.map(company => (
-                                    <option key={company.id} value={company.id}>
-                                        {company.name} ({company.code})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label htmlFor="part" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Part</label>
-                            <select
-                                id="part"
-                                name="part"
-                                value={formData.part}
-                                onChange={handleInputChange}
-                                required
-                                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                            >
-                                <option value="">Select Part</option>
-                                {parts.map(part => (
-                                    <option key={part.id} value={part.id}>
-                                        {part.part_number} - {part.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label htmlFor="blanks_qty" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Blanks Qty</label>
-                            <input
-                                type="number"
-                                id="blanks_qty"
-                                name="blanks_qty"
-                                value={formData.blanks_qty}
-                                onChange={handleInputChange}
-                                min="0"
-                                placeholder="0"
-                                style={{ width: '100%', boxSizing: 'border-box', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                            />
-                        </div>
-                        
-                        <div>
-                            <label htmlFor="finished_qty" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Finished Qty</label>
-                            <input
-                                type="number"
-                                id="finished_qty"
-                                name="finished_qty"
-                                value={formData.finished_qty}
-                                onChange={handleInputChange}
-                                min="0"
-                                placeholder="0"
-                                style={{ width: '100%', boxSizing: 'border-box', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                            />
-                        </div>
-                        
-                        <div>
-                            <label htmlFor="reserved_qty" style={{ display: 'block', marginBottom: '5px', fontWeight: '500' }}>Reserved Qty</label>
-                            <input
-                                type="number"
-                                id="reserved_qty"
-                                name="reserved_qty"
-                                value={formData.reserved_qty}
-                                onChange={handleInputChange}
-                                min="0"
-                                placeholder="0"
-                                style={{ width: '100%', padding: '8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
-                            />
-                        </div>
-                    </div>
-                    
-                    {formError && (
-                        <div style={{ color: '#dc2626', marginBottom: '10px', padding: '10px', backgroundColor: '#fee2e2', borderRadius: '4px' }}>
-                            {formError}
-                        </div>
-                    )}
-                    
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                        <button 
-                            type="submit" 
-                            disabled={submitting}
-                            style={{ 
-                                padding: '10px 20px', 
-                                backgroundColor: '#2563eb', 
-                                color: 'white', 
-                                border: 'none', 
-                                borderRadius: '4px', 
-                                cursor: submitting ? 'not-allowed' : 'pointer',
-                                opacity: submitting ? 0.6 : 1
-                            }}
-                        >
-                            {submitting
-                                ? (editingId ? 'Updating...' : 'Adding...')
-                                : (editingId ? 'Update Inventory' : 'Add Inventory')}
-                        </button>
-                        {editingId && (
-                            <button
-                                type="button"
-                                onClick={handleCancelEdit}
-                                style={{
-                                    padding: '10px 16px',
-                                    backgroundColor: '#6b7280',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                Cancel Edit
-                            </button>
-                        )}
-                    </div>
-                </form>
-            </div>
+            {/* Inventory is read-only in the frontend. Adjustments are performed via business events or by superusers using Adjust. */}
 
             {/* Inventory Table */}
             <div className="inventory-table-wrapper">
@@ -309,11 +124,9 @@ function Inventory() {
                             <th>Part</th>
                             <th>Blanks Qty</th>
                             <th>Finished Qty</th>
-                            <th>Reserved Qty</th>
-                            <th>Added By</th>
-                            <th>Updated By</th>
-                            <th>Created At</th>
-                            <th>Updated At</th>
+                            
+                            <th>Last Adjusted By</th>
+                            <th>Last Adjusted At</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -341,46 +154,72 @@ function Inventory() {
                                 </td>
                                 <td>{item.blanks_qty}</td>
                                 <td>{item.finished_qty}</td>
-                                <td>{item.reserved_qty}</td>
-                                <td>{item.added_by || '-'}</td>
-                                <td>{item.updated_by || '-'}</td>
-                                <td>{new Date(item.created_at).toLocaleString()}</td>
-                                <td>{new Date(item.updated_at).toLocaleString()}</td>
+                                
+                                <td>{item.last_adjusted_by || '-'}</td>
+                                <td>{item.last_adjusted_at ? new Date(item.last_adjusted_at).toLocaleString() : '-'}</td>
 
                                 <td>
                                     <div style={{ display: 'flex', gap: '6px' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleEditClick(item)}
-                                        style={{
-                                            padding: '4px 10px',
-                                            fontSize: '12px',
-                                            backgroundColor: '#10b981',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        Edit
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDelete(item.id)}
-                                        style={{
-                                            padding: '4px 10px',
-                                            fontSize: '12px',
-                                            backgroundColor: '#dc2626',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '4px',
-                                            cursor: 'pointer',
-                                        }}
-                                    >
-                                        Delete
-                                    </button>
+                                        {(userRole === 'ADMIN' || userRole === 'STOCK_MANAGER') && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openAdjust(item)}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    fontSize: '12px',
+                                                    backgroundColor: '#f59e0b',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                Adjust
+                                            </button>
+                                        )}
                                     </div>
+                                {/* Adjust Modal */}
+                                {adjustModalOpen && adjustItem && (
+                                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                                        <div style={{ width: 420, background: '#fff', padding: 20, borderRadius: 8 }}>
+                                            <h3 style={{ marginTop: 0 }}>Adjust Inventory</h3>
+                                            <p><strong>{adjustItem.company_name} — {adjustItem.part_name}</strong></p>
+                                            <div style={{ display: 'grid', gap: 10 }}>
+                                                <label>
+                                                    Field
+                                                    <select name="field" value={adjustForm.field} onChange={handleAdjustChange} style={{ width: '100%', padding: 8 }}>
+                                                        <option value="blanks">Blanks</option>
+                                                        <option value="finished">Finished</option>
+                                                        
+                                                    </select>
+                                                </label>
+
+                                                <label>
+                                                    Action
+                                                    <select name="action" value={adjustForm.action} onChange={handleAdjustChange} style={{ width: '100%', padding: 8 }}>
+                                                        <option value="increase">Increase</option>
+                                                        <option value="decrease">Decrease</option>
+                                                    </select>
+                                                </label>
+
+                                                <label>
+                                                    Quantity
+                                                    <input name="quantity" type="number" min="1" value={adjustForm.quantity} onChange={handleAdjustChange} style={{ width: '100%', padding: 8 }} />
+                                                </label>
+
+                                                <label>
+                                                    Reason*
+                                                    <textarea name="reason" value={adjustForm.reason} onChange={handleAdjustChange} rows={3} style={{ width: '100%', padding: 8 }} />
+                                                </label>
+
+                                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                                    <button onClick={closeAdjust} style={{ padding: '8px 12px' }}>Cancel</button>
+                                                    <button onClick={submitAdjust} style={{ padding: '8px 12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 4 }}>Submit</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 </td>
                                 
                             </tr>

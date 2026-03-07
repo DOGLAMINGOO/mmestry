@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class PoStatusDispatchConfig(AppConfig):
+class CustomerOrderConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'po_status_dispatch'
+    name = 'customer_order'
