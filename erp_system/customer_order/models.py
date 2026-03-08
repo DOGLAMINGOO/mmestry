@@ -51,6 +51,8 @@ class CustomerOrder(models.Model):
     deadline = models.DateField()
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    last_edit_reason = models.TextField(blank=True, null=True, help_text="Reason for the last edit.")
+    is_deleted = models.BooleanField(default=False, help_text="Soft deletion flag.")
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -58,6 +60,14 @@ class CustomerOrder(models.Model):
         null=True,
         blank=True,
         related_name="created_customer_orders",
+    )
+    last_edited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="edited_customer_orders",
+        help_text="The user who last edited this order.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

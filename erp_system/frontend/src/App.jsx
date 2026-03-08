@@ -8,16 +8,17 @@ import Inventory from './pages/Inventory.jsx'
 import InventoryDetail from './pages/InventoryDetail.jsx'
 import CustomerOrders from './pages/CustomerOrders.jsx'
 import CreateCustomerOrder from './pages/CreateCustomerOrder.jsx'
+import EditCustomerOrder from './pages/EditCustomerOrder.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 
-function Logout(){
+function Logout() {
   localStorage.clear()
   return <Navigate to="/login" />
 }
 
 
-function RegisterAndLogout(){
+function RegisterAndLogout() {
   localStorage.clear()                //good habit to clear any previous tokens while registering
   return <Register />
 }
@@ -31,18 +32,18 @@ function App() {
           <Route path='/login' element={<Login />} />
           <Route path='/logout' element={<Logout />} />
           <Route path='/register' element={<RegisterAndLogout />} />
-          <Route 
-            path='/' 
+          <Route
+            path='/'
             element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>} />
-          <Route 
-            path='/inventory' 
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>} />
+          <Route
+            path='/inventory'
             element={
-            <ProtectedRoute>
-              <Inventory />
-            </ProtectedRoute>} />
+              <ProtectedRoute>
+                <Inventory />
+              </ProtectedRoute>} />
           <Route
             path='/customer-orders'
             element={
@@ -59,7 +60,15 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route 
+          <Route
+            path='/customer-orders/edit/:id'
+            element={
+              <ProtectedRoute>
+                <EditCustomerOrder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path='/inventory/:id'
             element={
               <ProtectedRoute>
@@ -70,7 +79,7 @@ function App() {
           <Route path='*' element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-    
+
     </>
   );
 }

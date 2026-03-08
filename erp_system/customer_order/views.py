@@ -12,18 +12,25 @@ class CustomerOrderListCreateView(generics.ListCreateAPIView):
     Only ADMIN/MANAGER (or superuser) can create.
     """
 
-    queryset = CustomerOrder.objects.all().select_related("company", "client", "part", "created_by")
+    queryset = CustomerOrder.objects.filter(is_deleted=False).select_related("company", "client", "part", "created_by")
     serializer_class = CustomerOrderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrManagerForWrite]
 
 
-class CustomerOrderDetailView(generics.RetrieveUpdateAPIView):
+class CustomerOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieve or update a single customer order.
-    Updates are restricted to ADMIN/MANAGER (or superuser).
+    Retrieve, update or delete a single customer order.
+    Updates and deletes are restricted to ADMIN/MANAGER (or superuser).
     """
 
-    queryset = CustomerOrder.objects.all().select_related("company", "client", "part", "created_by")
+    queryset = CustomerOrder.objects.filter(is_deleted=False).select_related("company", "client", "part", "created_by")
     serializer_class = CustomerOrderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrManagerForWrite]
+
+    def perform_destroy(self, instance):
+        """
+        Soft delete the customer order.
+        """
+        instance.is_deleted = True
+        instance.save()
 

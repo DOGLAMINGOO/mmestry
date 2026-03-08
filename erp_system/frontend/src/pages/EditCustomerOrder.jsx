@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import '../styles/Inventory.css';
 
-function CreateCustomerOrder() {
+function EditCustomerOrder() {
+    const { id } = useParams();
     const navigate = useNavigate();
 
     const [companies, setCompanies] = useState([]);
     const [clients, setClients] = useState([]);
     const [parts, setParts] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+    const [userRole, setUserRole] = useState(null);
 
     const [form, setForm] = useState({
         company: '',
@@ -18,36 +23,50 @@ function CreateCustomerOrder() {
         deadline: '',
         priority: 'MEDIUM',
         status: 'DRAFT',
+        last_edit_reason: '',
     });
 
-    const [submitting, setSubmitting] = useState(false);
-
-    const [userRole, setUserRole] = useState(null);
-    const [loadingRole, setLoadingRole] = useState(true);
-
     useEffect(() => {
-        const fetchOptions = async () => {
+        const fetchData = async () => {
             try {
+                // Fetch selection options & user role
                 const [companiesRes, clientsRes, partsRes, userRes] = await Promise.all([
                     api.get('/api/companies/'),
                     api.get('/api/clients/'),
                     api.get('/api/parts/'),
                     api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
+
                 setCompanies(companiesRes.data);
                 setClients(clientsRes.data);
                 setParts(partsRes.data);
                 setUserRole(userRes.data.role);
+
+                // Fetch existing order data
+                const orderRes = await api.get(`/api/customer-orders/${id}/`);
+                const order = orderRes.data;
+
+                setForm({
+                    company: order.company || '',
+                    client: order.client || '',
+                    part: order.part || '',
+                    quantity: order.quantity || '',
+                    deadline: order.deadline || '',
+                    priority: order.priority || 'MEDIUM',
+                    status: order.status || 'DRAFT',
+                    last_edit_reason: '', // Mandatory empty on load
+                });
+
             } catch (err) {
-                console.error('Failed to load select options or user role', err);
-                alert('Failed to load companies/clients/parts. Please refresh.');
+                console.error('Failed to load edit customer order data', err);
+                alert('Error loading order data. Please return to the orders page.');
             } finally {
-                setLoadingRole(false);
+                setLoading(false);
             }
         };
 
-        fetchOptions();
-    }, []);
+        fetchData();
+    }, [id]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -57,6 +76,7 @@ function CreateCustomerOrder() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Validate basic fields
         if (!form.company || !form.client || !form.part) {
             alert('Please select company, client, and part.');
             return;
@@ -70,9 +90,15 @@ function CreateCustomerOrder() {
             return;
         }
 
+        // Validate mandatory last_edit_reason
+        if (!form.last_edit_reason || form.last_edit_reason.trim() === '') {
+            alert('A reason for editing MUST be provided to save changes.');
+            return;
+        }
+
         setSubmitting(true);
         try {
-            await api.post('/api/customer-orders/', {
+            await api.put(`/api/customer-orders/${id}/`, {
                 company: Number(form.company),
                 client: Number(form.client),
                 part: Number(form.part),
@@ -80,20 +106,21 @@ function CreateCustomerOrder() {
                 deadline: form.deadline,
                 priority: form.priority,
                 status: form.status,
+                last_edit_reason: form.last_edit_reason.trim(),
             });
-            alert('Customer order created successfully');
+            alert('Customer order updated successfully');
             navigate('/customer-orders');
         } catch (err) {
             console.error(err);
-            const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to create order';
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to update order';
             alert(msg);
         } finally {
             setSubmitting(false);
         }
     };
 
-    if (loadingRole) {
-        return <div>Loading...</div>;
+    if (loading) {
+        return <div>Loading order details...</div>;
     }
 
     if (userRole !== 'ADMIN' && userRole !== 'MANAGER') {
@@ -103,7 +130,7 @@ function CreateCustomerOrder() {
                     Back to Orders
                 </button>
                 <h2>Unauthorized</h2>
-                <p>You do not have permission to create customer orders.</p>
+                <p>You do not have permission to edit customer orders.</p>
             </div>
         );
     }
@@ -113,7 +140,7 @@ function CreateCustomerOrder() {
             <button type="button" onClick={() => navigate('/customer-orders')} style={{ marginBottom: 16 }}>
                 Back to Orders
             </button>
-            <h1>Create Customer Order</h1>
+            <h1>Edit Customer Order</h1>
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, maxWidth: 600 }}>
                 <label>
                     Company
@@ -220,24 +247,36 @@ function CreateCustomerOrder() {
                     </select>
                 </label>
 
+                <label style={{ color: '#d97706', fontWeight: 'bold' }}>
+                    Reason for Edit (Required)*
+                    <textarea
+                        name="last_edit_reason"
+                        value={form.last_edit_reason}
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder="Must explain why this customer order was changed..."
+                        style={{ width: '100%', padding: 8, marginTop: 4, borderColor: '#d97706' }}
+                    />
+                </label>
+
                 <button
                     type="submit"
                     disabled={submitting}
                     style={{
                         marginTop: 8,
                         padding: '10px 16px',
-                        backgroundColor: '#2563eb',
+                        backgroundColor: '#d97706',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 4,
                         cursor: submitting ? 'not-allowed' : 'pointer',
                     }}
                 >
-                    {submitting ? 'Creating...' : 'Create Order'}
+                    {submitting ? 'Saving Changes...' : 'Save Changes'}
                 </button>
             </form>
         </div>
     );
 }
 
-export default CreateCustomerOrder;
+export default EditCustomerOrder;

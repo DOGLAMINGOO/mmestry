@@ -26,6 +26,22 @@ function CustomerOrders() {
         }
     };
 
+    const handleDelete = async (orderId) => {
+        const confirmDelete = window.confirm("Are you sure you want to delete this customer order? (This will archive the record).");
+        if (!confirmDelete) return;
+
+        try {
+            await api.delete(`/api/customer-orders/${orderId}/`);
+            // Optimistically update the local state to remove the deleted item
+            setOrders((prev) => prev.filter((o) => o.id !== orderId));
+            alert("Customer order deleted successfully.");
+        } catch (err) {
+            console.error('Failed to delete customer order', err);
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to delete order';
+            alert(msg);
+        }
+    };
+
     useEffect(() => {
         fetchOrders();
     }, []);
@@ -79,6 +95,8 @@ function CustomerOrders() {
                                     <th>Status</th>
                                     <th>Created By</th>
                                     <th>Created At</th>
+                                    <th>Last Edited By</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -94,6 +112,41 @@ function CustomerOrders() {
                                         <td>{order.status}</td>
                                         <td>{order.created_by_username || '-'}</td>
                                         <td>{order.created_at ? new Date(order.created_at).toLocaleString() : '-'}</td>
+                                        <td>{order.last_edited_by_username || '-'}</td>
+                                        <td>
+                                            {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => navigate(`/customer-orders/edit/${order.id}`)}
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: '12px',
+                                                            backgroundColor: '#d97706',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(order.id)}
+                                                        style={{
+                                                            padding: '4px 8px',
+                                                            fontSize: '12px',
+                                                            backgroundColor: '#dc2626',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            cursor: 'pointer',
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

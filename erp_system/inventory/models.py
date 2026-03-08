@@ -7,7 +7,6 @@ from core.models import Company, Part
 class Inventory(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     part = models.ForeignKey(Part, on_delete=models.CASCADE)
-
     blanks_qty = models.PositiveIntegerField(default=0)
     finished_qty = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
