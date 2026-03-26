@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 
-from .models import Company, Part, Client
+from .models import Company, Part, Client, Machine, Operator
 
 
 User = get_user_model()
@@ -38,3 +38,11 @@ class PartAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
     list_display = ("name",)
+
+@admin.register(Machine)
+class MachineAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
+    list_display = ("name", "is_active")
+
+@admin.register(Operator)
+class OperatorAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
+    list_display = ("name", "is_active")

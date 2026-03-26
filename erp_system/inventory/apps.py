@@ -7,6 +7,6 @@ class InventoryConfig(AppConfig):
     def ready(self):
         # import signal handlers
         try:
-            from . import signals  # noqa: F401
+            from . import signals  
         except Exception:
             pass

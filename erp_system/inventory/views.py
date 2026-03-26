@@ -70,7 +70,7 @@ class InventoryAdjustView(APIView):
 
         data = request.data
         action = data.get("action")  # 'increase' or 'decrease'
-        field = data.get("field")  # 'blanks'|'finished'|'reserved'
+        field = data.get("field")  # 'blanks'|'finished'
         qty = data.get("quantity")
         reason = data.get("reason")
 

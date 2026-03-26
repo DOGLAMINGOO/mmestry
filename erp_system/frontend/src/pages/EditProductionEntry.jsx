@@ -1,0 +1,311 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../api';
+
+function EditProductionEntry() {
+    const { id } = useParams();
+    const navigate = useNavigate();
+
+    const [report, setReport] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+
+    const [form, setForm] = useState({
+        produced_quantity: '',
+        end_time: new Date().toISOString().slice(0, 16),
+        operator_working_hours: '',
+        parts_made_in_working_hours: '',
+        operator_overtime_hours: '0',
+        parts_made_in_overtime: '0',
+        idle_time_hours: '0',
+        idle_reason: '',
+        job_rating: 'EXCELLENT',
+        remarks: '',
+        status: 'COMPLETED'
+    });
+
+    useEffect(() => {
+        const fetchReport = async () => {
+            try {
+                const res = await api.get(`/api/production-reports/${id}/`);
+                const data = res.data;
+                setReport(data);
+                
+                // Pre-fill form if data already exists, otherwise use defaults
+                setForm(prev => ({
+                    ...prev,
+                    produced_quantity: data.produced_quantity || '',
+                    end_time: data.end_time ? data.end_time.slice(0, 16) : new Date().toISOString().slice(0, 16),
+                    operator_working_hours: data.operator_working_hours || '',
+                    parts_made_in_working_hours: data.parts_made_in_working_hours || '',
+                    operator_overtime_hours: data.operator_overtime_hours || '0',
+                    parts_made_in_overtime: data.parts_made_in_overtime || '0',
+                    idle_time_hours: data.idle_time_hours || '0',
+                    idle_reason: data.idle_reason || '',
+                    job_rating: data.job_rating || 'EXCELLENT',
+                    remarks: data.remarks || '',
+                    status: data.status || 'COMPLETED'
+                }));
+            } catch (err) {
+                console.error("Failed to load report", err);
+                alert("Failed to load Production Report details.");
+                navigate('/production');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReport();
+    }, [id, navigate]);
+
+    const handleChange = (e) => {
+        setForm({ ...form, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        // Client-side Validation Replication
+        const idleHours = parseFloat(form.idle_time_hours) || 0;
+        if (idleHours > 0 && (!form.idle_reason || form.idle_reason.trim() === '')) {
+            alert('Idle Reason is mandatory when Idle Time is greater than 0.');
+            return;
+        }
+
+        if (form.job_rating !== 'EXCELLENT' && (!form.remarks || form.remarks.trim() === '')) {
+            alert(`Remarks are mandatory when Job Rating is ${form.job_rating.replace('_', ' ')}.`);
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            // Re-format end_time to strict ISO for backend if changed
+            const payload = { ...form };
+            if (payload.end_time) {
+                 payload.end_time = new Date(payload.end_time).toISOString();
+            }
+            
+            // Auto-complete the report upon final submission per user request
+            payload.status = 'COMPLETED';
+
+            await api.patch(`/api/production-reports/${id}/`, payload);
+            alert('Production Report finalized successfully!');
+            navigate('/production');
+        } catch (err) {
+            console.error(err);
+            const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to save report';
+            alert(msg);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (loading) return <div style={{ padding: '20px' }}>Loading production data...</div>;
+    if (!report) return null;
+
+    const co = report.customer_order_details;
+    const isCompleted = report.status === 'COMPLETED';
+
+    return (
+        <div className="inventory-container" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}>
+            <button type="button" onClick={() => navigate('/production')} style={{ marginBottom: 16 }}>
+                Back to Dashboard
+            </button>
+            <h1>{isCompleted ? 'Edit' : 'Complete'} Production Entry #{report.id}</h1>
+            
+            {/* Context Card */}
+            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#334155' }}>Job Details</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '14px' }}>
+                    <div><strong>PO Number:</strong> <br/>{co?.po_number}</div>
+                    <div><strong>Part:</strong> <br/>{co?.part_name}</div>
+                    <div><strong>Client:</strong> <br/>{co?.client_name}</div>
+                    
+                    <div><strong>Machine:</strong> <br/>{report.machine_name}</div>
+                    <div><strong>Operator:</strong> <br/>{report.operator_name}</div>
+                    <div><strong>Start Time:</strong> <br/>{new Date(report.start_time).toLocaleString()}</div>
+                    
+                    <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '4px', gridColumn: 'span 3', border: '1px solid #bae6fd', marginTop: '8px' }}>
+                        <strong>Required Target Quantity:</strong> {co?.quantity}
+                    </div>
+                </div>
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                
+                {/* Core Metrics */}
+                <div style={{ gridColumn: 'span 2' }}>
+                    <h3 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>Production Output</h3>
+                </div>
+
+                <label>
+                    Produced Quantity *
+                    <input
+                        type="number"
+                        min="0"
+                        name="produced_quantity"
+                        value={form.produced_quantity}
+                        onChange={handleChange}
+                        required
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <label>
+                    End Time *
+                    <input
+                        type="datetime-local"
+                        name="end_time"
+                        value={form.end_time}
+                        onChange={handleChange}
+                        required
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                {/* Labor Tracking */}
+                <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
+                    <h3 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>Effort Logs</h3>
+                </div>
+
+                <label>
+                    Operator Working Hours *
+                    <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        name="operator_working_hours"
+                        value={form.operator_working_hours}
+                        onChange={handleChange}
+                        required
+                        placeholder="e.g. 8"
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <label>
+                    Parts Made in Working Hours *
+                    <input
+                        type="number"
+                        min="0"
+                        name="parts_made_in_working_hours"
+                        value={form.parts_made_in_working_hours}
+                        onChange={handleChange}
+                        required
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <label>
+                    Operator Overtime Hours
+                    <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        name="operator_overtime_hours"
+                        value={form.operator_overtime_hours}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <label>
+                    Parts Made in Overtime
+                    <input
+                        type="number"
+                        min="0"
+                        name="parts_made_in_overtime"
+                        value={form.parts_made_in_overtime}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <div style={{ gridColumn: 'span 2', background: '#fef2f2', border: '1px solid #fecaca', padding: '16px', borderRadius: '8px', marginTop: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px' }}>
+                        <label style={{ color: '#991b1b' }}>
+                            Idle Time Hours
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                name="idle_time_hours"
+                                value={form.idle_time_hours}
+                                onChange={handleChange}
+                                style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #fca5a5' }}
+                            />
+                        </label>
+                        <label style={{ color: '#991b1b' }}>
+                            Idle Reason {(parseFloat(form.idle_time_hours) > 0) ? <span style={{ color: 'red' }}>*</span> : '(Optional)'}
+                            <input
+                                type="text"
+                                name="idle_reason"
+                                value={form.idle_reason}
+                                onChange={handleChange}
+                                placeholder="Required if idle hours > 0"
+                                required={parseFloat(form.idle_time_hours) > 0}
+                                style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #fca5a5' }}
+                            />
+                        </label>
+                    </div>
+                </div>
+
+
+                {/* Quality & Feedback */}
+                <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
+                    <h3 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>Quality & Feedback</h3>
+                </div>
+
+                <label style={{ gridColumn: 'span 2' }}>
+                    Job Rating *
+                    <select
+                        name="job_rating"
+                        value={form.job_rating}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: '8px', marginTop: '4px', fontWeight: 'bold' }}
+                    >
+                        <option value="EXCELLENT">Excellent</option>
+                        <option value="VERY_GOOD">Very Good</option>
+                        <option value="GOOD">Good</option>
+                        <option value="POOR">Poor</option>
+                    </select>
+                </label>
+
+                <label style={{ gridColumn: 'span 2' }}>
+                    Remarks / Feedback {form.job_rating !== 'EXCELLENT' ? <span style={{ color: 'red' }}>*</span> : '(Optional if Excellent)'}
+                    <textarea
+                        name="remarks"
+                        value={form.remarks}
+                        onChange={handleChange}
+                        required={form.job_rating !== 'EXCELLENT'}
+                        rows={4}
+                        placeholder={form.job_rating === 'EXCELLENT' ? "Optional notes..." : "Please detail why the rating is less than Excellent..."}
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+
+                <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                        gridColumn: 'span 2',
+                        padding: '16px',
+                        backgroundColor: '#2563eb',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '16px',
+                        marginTop: '16px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
+                >
+                    {submitting ? 'Saving...' : 'Save & Submit Production Entry'}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+export default EditProductionEntry;

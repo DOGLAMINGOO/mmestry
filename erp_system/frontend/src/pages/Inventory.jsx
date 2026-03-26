@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Select from 'react-select';
 import api from '../api';
 import '../styles/Inventory.css'
 
@@ -13,6 +14,10 @@ function Inventory() {
 
     // Frontend state
     const [userRole, setUserRole] = useState(null);
+
+    // Search and Filter State
+    const [searchField, setSearchField] = useState({ value: 'part_name', label: 'Part' });
+    const [searchTerm, setSearchTerm] = useState(null);
 
     useEffect(() => {
         getInventory();
@@ -103,7 +108,18 @@ function Inventory() {
         fetchUser();
     }, []);
 
+    // Calculate unique options for the selected search field dropdown
+    const getSearchOptions = () => {
+        if (!inventory || !searchField) return [];
+        const uniqueValues = [...new Set(inventory.map(o => o[searchField.value]))].filter(Boolean);
+        return uniqueValues.map(val => ({ value: val, label: val }));
+    };
 
+    // Derived state for the filtered table
+    const filteredInventory = useMemo(() => {
+        if (!searchTerm) return inventory;
+        return inventory.filter(item => item[searchField.value] === searchTerm.value);
+    }, [inventory, searchField, searchTerm]);
 
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
@@ -115,8 +131,93 @@ function Inventory() {
             
             {/* Inventory is read-only in the frontend. Adjustments are performed via business events or by superusers using Adjust. */}
 
+            {/* Search Filters */}
+            <div style={{ 
+                display: 'flex', 
+                gap: '16px', 
+                marginBottom: '20px', 
+                alignItems: 'center', 
+                background: '#f9fafb', 
+                padding: '16px', 
+                borderRadius: '8px', 
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+            }}>
+                <div style={{ minWidth: '220px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: '#374151' }}>
+                        Filter Column By
+                    </label>
+                    <Select 
+                        value={searchField}
+                        onChange={(selected) => {
+                            setSearchField(selected);
+                            setSearchTerm(null);
+                        }}
+                        options={[
+                            { value: 'company_name', label: 'Company' },
+                            { value: 'part_name', label: 'Part' },
+                        ]}
+                    />
+                </div>
+                <div style={{ flex: 1, minWidth: '300px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: '#374151' }}>
+                        Search or Select {searchField.label}...
+                    </label>
+                    <Select 
+                        value={searchTerm}
+                        onChange={(selected) => setSearchTerm(selected)}
+                        options={getSearchOptions()}
+                        placeholder={`Start typing ${searchField.label.toLowerCase()} to filter...`}
+                        isClearable
+                    />
+                </div>
+                {(searchTerm || searchField.value !== 'part_name') && (
+                    <button 
+                        onClick={() => {
+                            setSearchTerm(null);
+                            setSearchField({ value: 'part_name', label: 'Part' });
+                        }}
+                        style={{ 
+                            marginTop: '22px', 
+                            padding: '10px 16px', 
+                            background: '#fee2e2', 
+                            border: '1px solid #fca5a5', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            color: '#b91c1c',
+                            transition: 'all 0.2s',
+                            fontFamily: 'Arial, sans-serif'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = '#fecaca';
+                            e.target.style.borderColor = '#f87171';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = '#fee2e2';
+                            e.target.style.borderColor = '#fca5a5';
+                        }}
+                    >
+                        Clear Filter
+                    </button>
+                )}
+            </div>
+
             {/* Inventory Table */}
             <div className="inventory-table-wrapper">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <h2 style={{ margin: 0 }}>Current Stock</h2>
+                    <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 'bold' }}>
+                        Showing {filteredInventory.length} {filteredInventory.length === 1 ? 'item' : 'items'}
+                    </span>
+                </div>
+                {filteredInventory.length === 0 && (
+                    <div style={{ padding: '20px', textAlign: 'center', background: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '16px' }}>
+                        <h3 style={{ margin: '0 0 8px 0', color: '#374151' }}>No matches found</h3>
+                        <p style={{ margin: 0, color: '#6b7280' }}>Try adjusting your search filters to find what you're looking for.</p>
+                    </div>
+                )}
+                {filteredInventory.length > 0 && (
                 <table className="inventory-table">
                     <thead>
                         <tr>
@@ -131,7 +232,7 @@ function Inventory() {
                         </tr>
                     </thead>
                     <tbody>
-                        {inventory.map(item => (
+                        {filteredInventory.map(item => (
                             <tr 
                                 key={item.id}
                                 style={{ cursor: 'default' }}
@@ -226,6 +327,7 @@ function Inventory() {
                         ))}
                     </tbody>
                 </table>
+                )}
             </div>
         </div>
     );

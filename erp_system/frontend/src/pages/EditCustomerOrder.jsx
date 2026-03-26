@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Select from 'react-select';
 import api from '../api';
 import '../styles/Inventory.css';
 
@@ -144,53 +145,41 @@ function EditCustomerOrder() {
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, maxWidth: 600 }}>
                 <label>
                     Company
-                    <select
+                    <Select
                         name="company"
-                        value={form.company}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: 8, marginTop: 4 }}
-                    >
-                        <option value="">Select company</option>
-                        {companies.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.name} ({c.code})
-                            </option>
-                        ))}
-                    </select>
+                        options={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` }))}
+                        value={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` })).find(opt => opt.value === Number(form.company)) || null}
+                        onChange={(selected) => setForm(prev => ({ ...prev, company: selected ? selected.value : '' }))}
+                        isClearable
+                        placeholder="Search company..."
+                        styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                    />
                 </label>
 
                 <label>
                     Client
-                    <select
+                    <Select
                         name="client"
-                        value={form.client}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: 8, marginTop: 4 }}
-                    >
-                        <option value="">Select client</option>
-                        {clients.map((cl) => (
-                            <option key={cl.id} value={cl.id}>
-                                {cl.name}
-                            </option>
-                        ))}
-                    </select>
+                        options={clients.map(cl => ({ value: cl.id, label: cl.name }))}
+                        value={clients.map(cl => ({ value: cl.id, label: cl.name })).find(opt => opt.value === Number(form.client)) || null}
+                        onChange={(selected) => setForm(prev => ({ ...prev, client: selected ? selected.value : '' }))}
+                        isClearable
+                        placeholder="Search client..."
+                        styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                    />
                 </label>
 
                 <label>
                     Part
-                    <select
+                    <Select
                         name="part"
-                        value={form.part}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: 8, marginTop: 4 }}
-                    >
-                        <option value="">Select part</option>
-                        {parts.map((p) => (
-                            <option key={p.id} value={p.id}>
-                                {p.part_number} - {p.name}
-                            </option>
-                        ))}
-                    </select>
+                        options={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` }))}
+                        value={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` })).find(opt => opt.value === Number(form.part)) || null}
+                        onChange={(selected) => setForm(prev => ({ ...prev, part: selected ? selected.value : '' }))}
+                        isClearable
+                        placeholder="Search part..."
+                        styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                    />
                 </label>
 
                 <label>

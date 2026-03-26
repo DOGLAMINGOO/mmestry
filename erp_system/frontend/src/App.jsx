@@ -9,8 +9,10 @@ import InventoryDetail from './pages/InventoryDetail.jsx'
 import CustomerOrders from './pages/CustomerOrders.jsx'
 import CreateCustomerOrder from './pages/CreateCustomerOrder.jsx'
 import EditCustomerOrder from './pages/EditCustomerOrder.jsx'
+import Production from './pages/Production.jsx'
+import CreateProductionEntry from './pages/CreateProductionEntry.jsx'
+import EditProductionEntry from './pages/EditProductionEntry.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
-
 
 function Logout() {
   localStorage.clear()
@@ -77,6 +79,30 @@ function App() {
             }
           />
           <Route path='*' element={<NotFound />} />
+          <Route
+            path='/production'
+            element={
+              <ProtectedRoute>
+                <Production />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/production/start/:id'
+            element={
+              <ProtectedRoute>
+                <CreateProductionEntry />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/production/report/:id'
+            element={
+              <ProtectedRoute>
+                <EditProductionEntry />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
 
