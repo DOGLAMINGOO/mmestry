@@ -76,6 +76,21 @@ function InventoryDetail() {
                         <p><strong>Cycle time (minutes per part):</strong> {part.cycle_time_minutes} min</p>
                     </>
                 )}
+                
+                <div style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <h3 style={{ marginTop: 0 }}>Stock Breakdown</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div><strong>Total Blanks:</strong> {item.total_blanks}</div>
+                        <div><strong>Reserved Blanks:</strong> {item.reserved_blanks || 0}</div>
+                        <div>
+                            <strong>Available Blanks:</strong> 
+                            <span style={{ color: item.available_blanks < 0 ? '#dc2626' : '#16a34a', fontWeight: 'bold', marginLeft: '4px' }}>
+                                {item.available_blanks}
+                            </span>
+                        </div>
+                        <div><strong>Finished Blanks:</strong> {item.finished_blanks}</div>
+                    </div>
+                </div>
 
                 <h3 style={{ marginTop: 16 }}>Companies with this part</h3>
                 {companiesWithPart.length === 0 && <p>No companies currently have this part.</p>}

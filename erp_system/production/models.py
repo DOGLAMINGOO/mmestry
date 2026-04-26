@@ -45,6 +45,7 @@ class ProductionReport(models.Model):
     # Quantities
     required_quantity = models.PositiveIntegerField()
     produced_quantity = models.PositiveIntegerField(null=True, blank=True)
+    scrap_quantity = models.PositiveIntegerField(default=0)
     
     # Time & Effort Logging
     start_time = models.DateTimeField()

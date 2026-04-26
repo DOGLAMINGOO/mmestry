@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "api",
     "customer_order",
     "production",
+    "dispatch",
 ]
 
 MIDDLEWARE = [
@@ -164,7 +165,13 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
 ]
 
 # JWT auth via Authorization header (no cookies needed)
 CORS_ALLOW_CREDENTIALS = False
+
+# Media settings
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

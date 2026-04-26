@@ -7,14 +7,14 @@ class InventoryAdmin(admin.ModelAdmin):
     list_display = (
         "company",
         "part",
-        "blanks_qty",
-        "finished_qty",
+        "total_blanks",
+        "finished_blanks",
         "created_at",
         "updated_at",
     )
     readonly_fields = (
-        "blanks_qty",
-        "finished_qty",
+        "total_blanks",
+        "finished_blanks",
         "created_at",
         "updated_at",
     )
@@ -79,7 +79,7 @@ class InventoryLogAdmin(admin.ModelAdmin):
     readonly_fields = (
         "inventory",
         "change_type",
-        "quantity_changed",
+        "quantity",
         "reason",
         "created_by",
         "created_at",

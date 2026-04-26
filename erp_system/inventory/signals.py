@@ -13,8 +13,8 @@ def create_inventory_for_new_part(sender, instance, created, **kwargs):
         Inventory.objects.get_or_create(
             company=company, part=instance,
             defaults={
-                "blanks_qty": 0,
-                "finished_qty": 0,
+                "total_blanks": 0,
+                "finished_blanks": 0,
                 "is_active": True,
             },
         )

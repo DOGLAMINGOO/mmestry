@@ -82,6 +82,7 @@ function CustomerOrders() {
             case 'APPROVED': return <span style={{ padding: '4px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Approved</span>;
             case 'IN_PRODUCTION': return <span style={{ padding: '4px 8px', background: '#d1fae5', color: '#065f46', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>In Production</span>;
             case 'READY_FOR_DISPATCH': return <span style={{ padding: '4px 8px', background: '#fce7f3', color: '#9d174d', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Ready For Dispatch</span>;
+            case 'PARTIALLY_SHIPPED': return <span style={{ padding: '4px 8px', background: '#e0f2fe', color: '#0369a1', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Partially Shipped</span>;
             case 'DISPATCHED': return <span style={{ padding: '4px 8px', background: '#fef3c7', color: '#92400e', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Dispatched</span>;
             case 'CLOSED': return <span style={{ padding: '4px 8px', background: '#e5e7eb', color: '#374151', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Closed</span>;
             default: return <span style={{ padding: '4px 8px', background: '#f3f4f6', color: '#4b5563', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>{status}</span>;
@@ -231,7 +232,7 @@ function CustomerOrders() {
                                         <td>{order.created_at ? new Date(order.created_at).toLocaleString() : '-'}</td>
                                         <td>{order.last_edited_by_username || '-'}</td>
                                         <td>
-                                            {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
+                                            {(userRole === 'ADMIN' || userRole === 'MANAGER') && order.status !== 'DISPATCHED' && (
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
                                                         onClick={() => navigate(`/customer-orders/edit/${order.id}`)}
@@ -276,4 +277,3 @@ function CustomerOrders() {
 }
 
 export default CustomerOrders;
-

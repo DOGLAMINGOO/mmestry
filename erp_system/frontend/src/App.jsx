@@ -12,6 +12,8 @@ import EditCustomerOrder from './pages/EditCustomerOrder.jsx'
 import Production from './pages/Production.jsx'
 import CreateProductionEntry from './pages/CreateProductionEntry.jsx'
 import EditProductionEntry from './pages/EditProductionEntry.jsx'
+import Dispatch from './pages/Dispatch.jsx'
+import DispatchHistoryPage from './pages/DispatchHistory.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 function Logout() {
@@ -78,7 +80,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path='*' element={<NotFound />} />
           <Route
             path='/production'
             element={
@@ -103,6 +104,23 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path='/dispatch'
+            element={
+              <ProtectedRoute>
+                <Dispatch />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/dispatch-history'
+            element={
+              <ProtectedRoute>
+                <DispatchHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path='*' element={<NotFound />} />
         </Routes>
       </BrowserRouter>
 

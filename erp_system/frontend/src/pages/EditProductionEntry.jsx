@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Select from 'react-select';
 import api from '../api';
 
 function EditProductionEntry() {
@@ -7,11 +8,17 @@ function EditProductionEntry() {
     const navigate = useNavigate();
 
     const [report, setReport] = useState(null);
+    const [machines, setMachines] = useState([]);
+    const [operators, setOperators] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
     const [form, setForm] = useState({
+        machine_name: '',
+        operator_name: '',
+        start_time: '',
         produced_quantity: '',
+        scrap_quantity: '0',
         end_time: new Date().toISOString().slice(0, 16),
         operator_working_hours: '',
         parts_made_in_working_hours: '',
@@ -25,16 +32,25 @@ function EditProductionEntry() {
     });
 
     useEffect(() => {
-        const fetchReport = async () => {
+        const fetchData = async () => {
             try {
-                const res = await api.get(`/api/production-reports/${id}/`);
-                const data = res.data;
-                setReport(data);
+                const [reportRes, machRes, opRes] = await Promise.all([
+                    api.get(`/api/production-reports/${id}/`),
+                    api.get('/api/machines/'),
+                    api.get('/api/operators/')
+                ]);
                 
-                // Pre-fill form if data already exists, otherwise use defaults
-                setForm(prev => ({
-                    ...prev,
+                const data = reportRes.data;
+                setReport(data);
+                setMachines(machRes.data.map(m => ({ value: m.name, label: m.name })));
+                setOperators(opRes.data.map(o => ({ value: o.name, label: o.name })));
+                
+                setForm({
+                    machine_name: data.machine_name || '',
+                    operator_name: data.operator_name || '',
+                    start_time: data.start_time ? data.start_time.slice(0, 16) : '',
                     produced_quantity: data.produced_quantity || '',
+                    scrap_quantity: data.scrap_quantity || '0',
                     end_time: data.end_time ? data.end_time.slice(0, 16) : new Date().toISOString().slice(0, 16),
                     operator_working_hours: data.operator_working_hours || '',
                     parts_made_in_working_hours: data.parts_made_in_working_hours || '',
@@ -45,16 +61,16 @@ function EditProductionEntry() {
                     job_rating: data.job_rating || 'EXCELLENT',
                     remarks: data.remarks || '',
                     status: data.status || 'COMPLETED'
-                }));
+                });
             } catch (err) {
-                console.error("Failed to load report", err);
-                alert("Failed to load Production Report details.");
+                console.error("Failed to load setup data", err);
+                alert("Failed to load requisite data.");
                 navigate('/production');
             } finally {
                 setLoading(false);
             }
         };
-        fetchReport();
+        fetchData();
     }, [id, navigate]);
 
     const handleChange = (e) => {
@@ -64,7 +80,6 @@ function EditProductionEntry() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // Client-side Validation Replication
         const idleHours = parseFloat(form.idle_time_hours) || 0;
         if (idleHours > 0 && (!form.idle_reason || form.idle_reason.trim() === '')) {
             alert('Idle Reason is mandatory when Idle Time is greater than 0.');
@@ -78,13 +93,14 @@ function EditProductionEntry() {
 
         setSubmitting(true);
         try {
-            // Re-format end_time to strict ISO for backend if changed
             const payload = { ...form };
+            if (payload.start_time) {
+                payload.start_time = new Date(payload.start_time).toISOString();
+            }
             if (payload.end_time) {
                  payload.end_time = new Date(payload.end_time).toISOString();
             }
             
-            // Auto-complete the report upon final submission per user request
             payload.status = 'COMPLETED';
 
             await api.patch(`/api/production-reports/${id}/`, payload);
@@ -114,15 +130,11 @@ function EditProductionEntry() {
             
             {/* Context Card */}
             <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#334155' }}>Job Details</h3>
+                <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#334155' }}>Order Context</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '14px' }}>
                     <div><strong>PO Number:</strong> <br/>{co?.po_number}</div>
                     <div><strong>Part:</strong> <br/>{co?.part_name}</div>
                     <div><strong>Client:</strong> <br/>{co?.client_name}</div>
-                    
-                    <div><strong>Machine:</strong> <br/>{report.machine_name}</div>
-                    <div><strong>Operator:</strong> <br/>{report.operator_name}</div>
-                    <div><strong>Start Time:</strong> <br/>{new Date(report.start_time).toLocaleString()}</div>
                     
                     <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '4px', gridColumn: 'span 3', border: '1px solid #bae6fd', marginTop: '8px' }}>
                         <strong>Required Target Quantity:</strong> {co?.quantity}
@@ -132,18 +144,72 @@ function EditProductionEntry() {
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 
-                {/* Core Metrics */}
+                {/* Editable Metadata */}
                 <div style={{ gridColumn: 'span 2' }}>
+                    <h3 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>Production Setup (Editable)</h3>
+                </div>
+
+                <label>
+                    Machine Name *
+                    <Select
+                        options={machines}
+                        value={machines.find(m => m.value === form.machine_name) || { value: form.machine_name, label: form.machine_name }}
+                        onChange={(selected) => setForm({ ...form, machine_name: selected ? selected.value : '' })}
+                        isClearable
+                        placeholder="Select or search machine..."
+                        styles={{ container: base => ({ ...base, marginTop: '4px' }) }}
+                    />
+                </label>
+
+                <label>
+                    Operator Name *
+                    <Select
+                        options={operators}
+                        value={operators.find(o => o.value === form.operator_name) || { value: form.operator_name, label: form.operator_name }}
+                        onChange={(selected) => setForm({ ...form, operator_name: selected ? selected.value : '' })}
+                        isClearable
+                        placeholder="Select or search operator..."
+                        styles={{ container: base => ({ ...base, marginTop: '4px' }) }}
+                    />
+                </label>
+
+                <label style={{ gridColumn: 'span 2' }}>
+                    Start Time *
+                    <input
+                        type="datetime-local"
+                        name="start_time"
+                        value={form.start_time}
+                        onChange={handleChange}
+                        required
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                {/* Core Metrics */}
+                <div style={{ gridColumn: 'span 2', marginTop: '16px' }}>
                     <h3 style={{ borderBottom: '1px solid #e5e7eb', paddingBottom: '8px' }}>Production Output</h3>
                 </div>
 
                 <label>
-                    Produced Quantity *
+                    Produced Quantity (Good Parts) *
                     <input
                         type="number"
                         min="0"
                         name="produced_quantity"
                         value={form.produced_quantity}
+                        onChange={handleChange}
+                        required
+                        style={{ width: '100%', padding: '8px', marginTop: '4px' }}
+                    />
+                </label>
+
+                <label>
+                    Scrap Quantity *
+                    <input
+                        type="number"
+                        min="0"
+                        name="scrap_quantity"
+                        value={form.scrap_quantity}
                         onChange={handleChange}
                         required
                         style={{ width: '100%', padding: '8px', marginTop: '4px' }}

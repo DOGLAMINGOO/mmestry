@@ -22,8 +22,14 @@ class IsAdminOrStockManagerForWrite(permissions.BasePermission):
         return request.user.role in ['ADMIN', 'STOCK_MANAGER']
 
 class ProductionReportViewSet(viewsets.ModelViewSet):
-    # Ensure we don't return production reports for soft-deleted customer orders
-    queryset = ProductionReport.objects.filter(customer_order__is_deleted=False).select_related('customer_order', 'created_by', 'last_edited_by')
+    # Ensure we don't return production reports for soft-deleted or dispatched customer orders
+    def get_queryset(self):
+        return ProductionReport.objects.filter(
+            customer_order__is_deleted=False
+        ).exclude(
+            customer_order__status='DISPATCHED'
+        ).select_related('customer_order', 'created_by', 'last_edited_by')
+
     serializer_class = ProductionReportSerializer
     permission_classes = [IsAdminOrStockManagerForWrite]
 
@@ -71,9 +77,12 @@ class ProductionReportViewSet(viewsets.ModelViewSet):
                     # Log reasons for clarity in auditing
                     reason = f"Production Report #{report.id} completed for PO: {customer_order.po_number}"
                     
-                    # These models raise DjangoValidationError if negative stock occurs
+                    # Deduce produced + scrap from total_blanks
+                    # Add produced to finished_blanks
+                    total_consumed = qty + (report.scrap_quantity or 0)
+                    
                     try:
-                        inv.decrease_blanks(qty, user=self.request.user, change_type=InventoryLog.PRODUCTION_USED, reason=reason)
+                        inv.decrease_blanks(total_consumed, user=self.request.user, change_type=InventoryLog.PRODUCTION_USED, reason=reason)
                         inv.increase_finished(qty, user=self.request.user, change_type=InventoryLog.PRODUCTION_CREATED, reason=reason)
                     except DjangoValidationError as e:
                         # Translate Django model validation to DRF 400 Bad Request natively

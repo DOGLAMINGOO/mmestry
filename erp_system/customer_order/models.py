@@ -15,6 +15,7 @@ class CustomerOrder(models.Model):
     STATUS_APPROVED = "APPROVED"
     STATUS_IN_PRODUCTION = "IN_PRODUCTION"
     STATUS_READY_FOR_DISPATCH = "READY_FOR_DISPATCH"
+    STATUS_PARTIALLY_SHIPPED = "PARTIALLY_SHIPPED"
     STATUS_DISPATCHED = "DISPATCHED"
     STATUS_CLOSED = "CLOSED"
 
@@ -23,6 +24,7 @@ class CustomerOrder(models.Model):
         (STATUS_APPROVED, "Approved"),
         (STATUS_IN_PRODUCTION, "In production"),
         (STATUS_READY_FOR_DISPATCH, "Ready for dispatch"),
+        (STATUS_PARTIALLY_SHIPPED, "Partially shipped"),
         (STATUS_DISPATCHED, "Dispatched"),
         (STATUS_CLOSED, "Closed"),
     ]
@@ -52,6 +54,7 @@ class CustomerOrder(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     last_edit_reason = models.TextField(blank=True, null=True, help_text="Reason for the last edit.")
+    qc_report = models.FileField(upload_to="qc_reports/", null=True, blank=True)
     is_deleted = models.BooleanField(default=False, help_text="Soft deletion flag.")
 
     created_by = models.ForeignKey(
@@ -106,4 +109,3 @@ class CustomerOrder(models.Model):
         if not self.po_number and self.company_id:
             self.po_number = self._generate_po_number()
         super().save(*args, **kwargs)
-
