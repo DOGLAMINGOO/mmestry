@@ -38,3 +38,9 @@ class DispatchHistory(models.Model):
 
     def __str__(self):
         return f"History: {self.po_number} - {self.shipped_quantity} units"
+
+class DispatchOrder(CustomerOrder):
+    class Meta:
+        proxy = True
+        verbose_name = "Dispatch (Ready/Partial)"
+        verbose_name_plural = "Dispatch (Ready/Partial)"

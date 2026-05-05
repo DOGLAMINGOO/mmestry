@@ -86,3 +86,9 @@ class ProductionReport(models.Model):
         
     def __str__(self):
         return f"Production Report for {self.customer_order.po_number}"
+
+class ProductionOrder(CustomerOrder):
+    class Meta:
+        proxy = True
+        verbose_name = "Production (Approved/In-Progress)"
+        verbose_name_plural = "Production (Approved/In-Progress)"
