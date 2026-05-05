@@ -123,6 +123,7 @@ function DispatchHistoryPage() {
                             <th>Company</th>
                             <th>Client</th>
                             <th>Part</th>
+                            <th>Target Qty</th>
                             <th>Shipped Qty</th>
                             <th>QC Report</th>
                             <th>Dispatched By</th>
@@ -130,9 +131,9 @@ function DispatchHistoryPage() {
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px' }}>Loading history...</td></tr>
+                            <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px' }}>Loading history...</td></tr>
                         ) : history.length === 0 ? (
-                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>No dispatch records found.</td></tr>
+                            <tr><td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>No dispatch records found.</td></tr>
                         ) : (
                             history.map(record => (
                                 <tr key={record.id}>
@@ -141,6 +142,7 @@ function DispatchHistoryPage() {
                                     <td>{record.company_name}</td>
                                     <td>{record.client_name}</td>
                                     <td>{record.part_name}</td>
+                                    <td>{record.target_quantity}</td>
                                     <td>{record.shipped_quantity}</td>
                                     <td>
                                         <a href={record.qc_report} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 'bold' }}>
