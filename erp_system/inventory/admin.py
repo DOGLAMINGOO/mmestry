@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Inventory, InventoryLog
+from .models import Inventory, InventoryLog, StockReceipt
 from accounts.models import CustomUser
 
 # Register your models here.
@@ -106,3 +106,10 @@ class InventoryLogAdmin(admin.ModelAdmin):
 
 
 admin.site.register(InventoryLog, InventoryLogAdmin)
+
+@admin.register(StockReceipt)
+class StockReceiptAdmin(admin.ModelAdmin):
+    list_display = ("invoice_number", "company", "part", "quantity", "supplier_name", "received_at", "received_by")
+    list_filter = ("company", "received_at")
+    search_fields = ("invoice_number", "supplier_name", "part__name")
+    readonly_fields = ("received_at", "received_by")
