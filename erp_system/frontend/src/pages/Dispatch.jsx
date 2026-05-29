@@ -8,6 +8,15 @@ function Dispatch() {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const getQcReportUrl = (path) => {
+        if (!path) return '#';
+        if (path.startsWith('http')) return path;
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        return `${cleanBase}${cleanPath}`;
+    };
     const [dispatchingOrder, setDispatchingOrder] = useState(null); // Order object for modal
     const [shipQty, setShipQty] = useState(0);
     const [isShortClose, setIsShortClose] = useState(false);
@@ -163,7 +172,7 @@ function Dispatch() {
                                     </td>
                                     <td>
                                         {hasQC ? (
-                                            <a href={order.qc_report_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '13px' }}>
+                                            <a href={getQcReportUrl(order.qc_report_url)} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: '13px' }}>
                                                 View PDF
                                             </a>
                                         ) : (
