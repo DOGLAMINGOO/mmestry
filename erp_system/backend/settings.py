@@ -35,8 +35,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
+ALLOWED_HOSTS = ["*"]
 # ALLOWED_HOSTS = ["*"]
-ALLOWED_HOSTS = ["erp-backend-i0cp.onrender.com"]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -131,6 +131,13 @@ DATABASES = {
     )
 }
 
+# Enforce SSL for production PostgreSQL database on Render
+if not DEBUG:
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -183,6 +190,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5174",
 ]
 
+# Support production frontend CORS origins via environment variables
+FRONTEND_URL = os.environ.get("FRONTEND_URL")
+if FRONTEND_URL:
+    CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
+
+env_cors = os.environ.get("CORS_ALLOWED_ORIGINS")
+if env_cors:
+    CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in env_cors.split(",") if origin.strip()])
+
 # JWT auth via Authorization header (no cookies needed)
 CORS_ALLOW_CREDENTIALS = False
 
@@ -191,8 +207,8 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME') or os.getenv('CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY') or os.getenv('API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET') or os.getenv('API_SECRET'),
 }
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
