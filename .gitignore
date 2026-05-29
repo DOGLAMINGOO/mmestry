@@ -8,6 +8,7 @@ __pycache__/
 # Django
 db.sqlite3
 .env
+media/
 
 # Node
 node_modules/
