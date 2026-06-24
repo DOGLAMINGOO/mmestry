@@ -23,6 +23,35 @@ class CustomerOrderListCreateView(generics.ListCreateAPIView):
     serializer_class = CustomerOrderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrManagerForWrite]
 
+    def create(self, request, *args, **kwargs):
+        data = request.data
+
+        if isinstance(data, list):
+            serializer = self.get_serializer(data=data, many=True)
+        elif isinstance(data, dict) and data.get("items") is not None:
+            items = data.get("items")
+            if not isinstance(items, list):
+                return Response({"items": "A list of order items is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+            common = {
+                "po_number": data.get("po_number"),
+                "po_date": data.get("po_date"),
+                "company": data.get("company"),
+                "client": data.get("client"),
+            }
+            serialized_items = [
+                {**common, **item}
+                for item in items
+            ]
+            serializer = self.get_serializer(data=serialized_items, many=True)
+        else:
+            serializer = self.get_serializer(data=data)
+
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class CustomerOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
     """

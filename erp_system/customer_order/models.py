@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import models
 from django.conf import settings
 
@@ -41,10 +43,12 @@ class CustomerOrder(models.Model):
     ]
 
     po_number = models.CharField(
-        max_length=20,
-        unique=True,
-        editable=False,
-        help_text="Auto-generated purchase order number (e.g. PO-A-001).",
+        max_length=50,
+        help_text="Purchase order number entered manually by the user.",
+    )
+    po_date = models.DateField(
+        default=date.today,
+        help_text="The officially registered order date.",
     )
     company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="customer_orders")
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="customer_orders")
@@ -80,32 +84,3 @@ class CustomerOrder(models.Model):
 
     def __str__(self):
         return self.po_number or f"Order for {self.client} ({self.part})"
-
-    def _generate_po_number(self) -> str:
-        """
-        Generate a new PO number in the format PO-<company.code>-NNN.
-        Sequence is per company based on the last existing order.
-        """
-        prefix = f"PO-{self.company.code}-"
-        last_order = (
-            CustomerOrder.objects.filter(company=self.company, po_number__startswith=prefix)
-            .order_by("-po_number")
-            .first()
-        )
-
-        last_seq = 0
-        if last_order and last_order.po_number:
-            # Expect format PO-<code>-NNN
-            try:
-                last_seq = int(last_order.po_number.split("-")[-1])
-            except (ValueError, IndexError):
-                last_seq = 0
-
-        next_seq = last_seq + 1
-        return f"{prefix}{next_seq:03d}"
-
-    def save(self, *args, **kwargs):
-        # Auto-generate PO number on first save
-        if not self.po_number and self.company_id:
-            self.po_number = self._generate_po_number()
-        super().save(*args, **kwargs)

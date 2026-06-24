@@ -24,6 +24,8 @@ function EditCustomerOrder() {
         deadline: '',
         priority: 'MEDIUM',
         status: 'DRAFT',
+        po_number: '',
+        order_date: '',
         last_edit_reason: '',
     });
 
@@ -55,6 +57,8 @@ function EditCustomerOrder() {
                     deadline: order.deadline || '',
                     priority: order.priority || 'MEDIUM',
                     status: order.status || 'DRAFT',
+                    po_number: order.po_number || '',
+                    order_date: order.po_date || '',
                     last_edit_reason: '', // Mandatory empty on load
                 });
 
@@ -86,6 +90,14 @@ function EditCustomerOrder() {
             alert('Quantity must be a positive number.');
             return;
         }
+        if (!form.po_number || form.po_number.trim() === '') {
+            alert('Please enter a PO number. This will be used throughout the order lifecycle.');
+            return;
+        }
+        if (!form.order_date) {
+            alert('Order date is required. Please select a date.');
+            return;
+        }
         if (!form.deadline) {
             alert('Please select a deadline.');
             return;
@@ -100,6 +112,8 @@ function EditCustomerOrder() {
         setSubmitting(true);
         try {
             await api.put(`/api/customer-orders/${id}/`, {
+                po_number: form.po_number.trim(),
+                po_date: form.order_date,
                 company: Number(form.company),
                 client: Number(form.client),
                 part: Number(form.part),
@@ -179,6 +193,29 @@ function EditCustomerOrder() {
                         isClearable
                         placeholder="Search part..."
                         styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                    />
+                </label>
+
+                <label>
+                    PO Number
+                    <input
+                        type="text"
+                        name="po_number"
+                        value={form.po_number}
+                        onChange={handleChange}
+                        placeholder="Enter manual PO number"
+                        style={{ width: '100%', padding: 8, marginTop: 4 }}
+                    />
+                </label>
+
+                <label>
+                    Order Date
+                    <input
+                        type="date"
+                        name="order_date"
+                        value={form.order_date}
+                        onChange={handleChange}
+                        style={{ width: '100%', padding: 8, marginTop: 4 }}
                     />
                 </label>
 

@@ -33,6 +33,7 @@ class CompanyAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
 @admin.register(Part)
 class PartAdmin(AdminOnlyAddMixin, admin.ModelAdmin):
     list_display = ("part_number", "name", "cycle_time_minutes")
+    search_fields = ("part_number", "name", "description")
 
 
 @admin.register(Client)

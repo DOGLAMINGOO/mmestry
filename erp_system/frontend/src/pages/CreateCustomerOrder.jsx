@@ -11,15 +11,23 @@ function CreateCustomerOrder() {
     const [clients, setClients] = useState([]);
     const [parts, setParts] = useState([]);
 
+    const today = new Date().toISOString().split('T')[0];
     const [form, setForm] = useState({
-        company: '',
         client: '',
-        part: '',
-        quantity: '',
-        deadline: '',
-        priority: 'MEDIUM',
-        status: 'DRAFT',
+        po_number: '',
+        order_date: today,
     });
+
+    const [items, setItems] = useState([
+        {
+            company: '',
+            part: '',
+            quantity: '',
+            deadline: '',
+            priority: 'MEDIUM',
+            status: 'DRAFT',
+        },
+    ]);
 
     const [submitting, setSubmitting] = useState(false);
 
@@ -55,32 +63,75 @@ function CreateCustomerOrder() {
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleItemChange = (index, field, value) => {
+        setItems((prev) =>
+            prev.map((item, idx) =>
+                idx === index ? { ...item, [field]: value } : item
+            )
+        );
+    };
+
+    const addItem = () => {
+        setItems((prev) => [
+            ...prev,
+            {
+                company: '',
+                part: '',
+                quantity: '',
+                deadline: '',
+                priority: 'MEDIUM',
+                status: 'DRAFT',
+            },
+        ]);
+    };
+
+    const removeItem = (index) => {
+        if (items.length <= 1) {
+            return;
+        }
+        setItems((prev) => prev.filter((_, idx) => idx !== index));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!form.company || !form.client || !form.part) {
-            alert('Please select company, client, and part.');
+        if (!form.client) {
+            alert('Please select a client.');
             return;
         }
-        if (!form.quantity || parseInt(form.quantity, 10) <= 0) {
-            alert('Quantity must be a positive number.');
+        if (!form.po_number || form.po_number.trim() === '') {
+            alert('Please enter a PO number. This will be used throughout the order lifecycle.');
             return;
         }
-        if (!form.deadline) {
-            alert('Please select a deadline.');
+
+        let orderDate = form.order_date;
+        if (!orderDate) {
+            const defaultDate = new Date().toISOString().split('T')[0];
+            alert('Order date not filled. Setting default to today.');
+            orderDate = defaultDate;
+            setForm((prev) => ({ ...prev, order_date: defaultDate }));
+        }
+
+        const invalidItem = items.find((item) => !item.company || !item.part || !item.quantity || parseInt(item.quantity, 10) <= 0 || !item.deadline);
+        if (invalidItem) {
+            alert('Each item must have a company, part, a positive quantity, and a deadline.');
             return;
         }
 
         setSubmitting(true);
         try {
             await api.post('/api/customer-orders/', {
-                company: Number(form.company),
+                po_number: form.po_number.trim(),
+                po_date: orderDate,
                 client: Number(form.client),
-                part: Number(form.part),
-                quantity: Number(form.quantity),
-                deadline: form.deadline,
-                priority: form.priority,
-                status: form.status,
+                items: items.map((item) => ({
+                    company: Number(item.company),
+                    part: Number(item.part),
+                    quantity: Number(item.quantity),
+                    deadline: item.deadline,
+                    priority: item.priority,
+                    status: item.status,
+                })),
             });
             alert('Customer order created successfully');
             navigate('/customer-orders');
@@ -117,19 +168,6 @@ function CreateCustomerOrder() {
             <h1>Create Customer Order</h1>
             <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12, maxWidth: 600 }}>
                 <label>
-                    Company
-                    <Select
-                        name="company"
-                        options={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` }))}
-                        value={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` })).find(opt => opt.value === Number(form.company)) || null}
-                        onChange={(selected) => setForm(prev => ({ ...prev, company: selected ? selected.value : '' }))}
-                        isClearable
-                        placeholder="Search company..."
-                        styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
-                    />
-                </label>
-
-                <label>
                     Client
                     <Select
                         name="client"
@@ -143,67 +181,149 @@ function CreateCustomerOrder() {
                 </label>
 
                 <label>
-                    Part
-                    <Select
-                        name="part"
-                        options={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` }))}
-                        value={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` })).find(opt => opt.value === Number(form.part)) || null}
-                        onChange={(selected) => setForm(prev => ({ ...prev, part: selected ? selected.value : '' }))}
-                        isClearable
-                        placeholder="Search part..."
-                        styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
-                    />
-                </label>
-
-                <label>
-                    Quantity
+                    PO Number
                     <input
-                        type="number"
-                        name="quantity"
-                        min="1"
-                        value={form.quantity}
+                        type="text"
+                        name="po_number"
+                        value={form.po_number}
                         onChange={handleChange}
+                        placeholder="Enter manual PO number"
                         style={{ width: '100%', padding: 8, marginTop: 4 }}
                     />
                 </label>
 
                 <label>
-                    Deadline
+                    Order Date
                     <input
                         type="date"
-                        name="deadline"
-                        value={form.deadline}
+                        name="order_date"
+                        value={form.order_date}
                         onChange={handleChange}
                         style={{ width: '100%', padding: 8, marginTop: 4 }}
                     />
                 </label>
 
-                <label>
-                    Priority
-                    <select
-                        name="priority"
-                        value={form.priority}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: 8, marginTop: 4 }}
-                    >
-                        <option value="LOW">Low</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HIGH">High</option>
-                    </select>
-                </label>
+                <div style={{ display: 'grid', gap: 16, marginTop: 8 }}>
+                    {items.map((item, index) => (
+                        <div key={index} style={{ padding: 12, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <strong>Item {index + 1}</strong>
+                                {items.length > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => removeItem(index)}
+                                        style={{
+                                            backgroundColor: '#ef4444',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: 4,
+                                            padding: '6px 10px',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
 
-                <label>
-                    Status
-                    <select
-                        name="status"
-                        value={form.status}
-                        onChange={handleChange}
-                        style={{ width: '100%', padding: 8, marginTop: 4 }}
+                            <label>
+                                Company
+                                <Select
+                                    name="company"
+                                    options={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` }))}
+                                    value={companies.map(c => ({ value: c.id, label: `${c.name} (${c.code})` })).find(opt => opt.value === Number(item.company)) || null}
+                                    onChange={(selected) => handleItemChange(index, 'company', selected ? selected.value : '')}
+                                    isClearable
+                                    placeholder="Search company..."
+                                    styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                                />
+                            </label>
+
+                            <label>
+                                Part
+                                <Select
+                                    name="part"
+                                    options={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` }))}
+                                    value={parts.map(p => ({ value: p.id, label: `${p.part_number} - ${p.name}` })).find(opt => opt.value === Number(item.part)) || null}
+                                    onChange={(selected) => handleItemChange(index, 'part', selected ? selected.value : '')}
+                                    isClearable
+                                    placeholder="Search part..."
+                                    styles={{ container: (base) => ({ ...base, marginTop: 4 }) }}
+                                />
+                            </label>
+
+                            <label>
+                                Quantity
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                    style={{ width: '100%', padding: 8, marginTop: 4 }}
+                                />
+                            </label>
+
+                            <label>
+                                Deadline
+                                <input
+                                    type="date"
+                                    name="deadline"
+                                    value={item.deadline}
+                                    onChange={(e) => handleItemChange(index, 'deadline', e.target.value)}
+                                    style={{ width: '100%', padding: 8, marginTop: 4 }}
+                                />
+                            </label>
+
+                            <label>
+                                Priority
+                                <select
+                                    name="priority"
+                                    value={item.priority}
+                                    onChange={(e) => handleItemChange(index, 'priority', e.target.value)}
+                                    style={{ width: '100%', padding: 8, marginTop: 4 }}
+                                >
+                                    <option value="LOW">Low</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="HIGH">High</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                Status
+                                <select
+                                    name="status"
+                                    value={item.status}
+                                    onChange={(e) => handleItemChange(index, 'status', e.target.value)}
+                                    style={{ width: '100%', padding: 8, marginTop: 4 }}
+                                >
+                                    <option value="DRAFT">Draft</option>
+                                    <option value="APPROVED">Approved</option>
+                                    <option value="IN_PRODUCTION">In production</option>
+                                    <option value="READY_FOR_DISPATCH">Ready for dispatch</option>
+                                    <option value="DISPATCHED">Dispatched</option>
+                                    <option value="CLOSED">Closed</option>
+                                </select>
+                            </label>
+                        </div>
+                    ))}
+
+                    <button
+                        type="button"
+                        onClick={addItem}
+                        style={{
+                            padding: '10px 16px',
+                            backgroundColor: '#10b981',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                            width: 'fit-content',
+                        }}
                     >
-                        <option value="DRAFT">Draft</option>
-                        <option value="APPROVED">Approved</option>
-                    </select>
-                </label>
+                        Add Another Part
+                    </button>
+                </div>
 
                 <button
                     type="submit"

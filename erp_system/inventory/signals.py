@@ -11,10 +11,10 @@ def create_inventory_for_new_part(sender, instance, created, **kwargs):
     # Create an Inventory record for every company for this part
     for company in Company.objects.all():
         Inventory.objects.get_or_create(
-            company=company, part=instance,
+            company=company,
+            part=instance,
             defaults={
                 "total_blanks": 0,
                 "finished_blanks": 0,
-                "is_active": True,
             },
         )

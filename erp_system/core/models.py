@@ -19,10 +19,8 @@ class Client(models.Model):
 class Part(models.Model):
     part_number = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
     cycle_time_minutes = models.PositiveIntegerField()
-    
-    
-
 
     def __str__(self):
         return f"{self.part_number} - {self.name}"

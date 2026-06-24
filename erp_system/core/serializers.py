@@ -9,7 +9,7 @@ class CompanySerializer(serializers.ModelSerializer):
 class PartSerializer(serializers.ModelSerializer):
     class Meta:
         model = Part
-        fields = ['id', 'part_number', 'name', 'cycle_time_minutes']
+        fields = ['id', 'part_number', 'name', 'description', 'cycle_time_minutes']
 
 
 class ClientSerializer(serializers.ModelSerializer):

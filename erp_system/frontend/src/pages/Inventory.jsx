@@ -123,12 +123,12 @@ function Inventory() {
         if (!invoice_number) return alert('Invoice number is required');
 
         try {
-            await api.post('/api/inventory/stock-receipts/', { 
-                company, 
-                part, 
-                quantity: qty, 
-                supplier_name, 
-                invoice_number 
+            await api.post('/api/inventory/stock-receipts/', {
+                company,
+                part,
+                quantity: qty,
+                supplier_name,
+                invoice_number
             });
             await getInventory();
             closeReceive();
@@ -254,7 +254,7 @@ function Inventory() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <h2 style={{ margin: 0 }}>Current Stock</h2>
                         {(userRole === 'ADMIN' || userRole === 'STOCK_MANAGER') && (
-                            <button 
+                            <button
                                 onClick={openReceive}
                                 style={{
                                     padding: '6px 14px',
@@ -308,6 +308,7 @@ function Inventory() {
                                     <td>
                                         <span
                                             onClick={() => navigate(`/inventory/${item.id}`)}
+                                            title={`Part: ${item.part_number} - ${item.part_name}${item.part_description ? `\nDescription: ${item.part_description}` : ''}`}
                                             style={{
                                                 cursor: 'pointer',
                                                 color: '#2563eb',
@@ -416,7 +417,7 @@ function Inventory() {
                         <p style={{ marginBottom: 20, color: '#6b7280', fontSize: '14px' }}>
                             Manual adjustment for <strong>{adjustItem.company_name} — {adjustItem.part_name}</strong>
                         </p>
-                        
+
                         <div style={{ display: 'grid', gap: 16 }}>
                             <label style={{ display: 'block' }}>
                                 <span style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Field*</span>

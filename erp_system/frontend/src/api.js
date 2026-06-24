@@ -18,4 +18,30 @@ api.interceptors.request.use(
     }
 )
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const status = error.response?.status;
+        const data = error.response?.data;
+
+        if (status === 401 || status === 403) {
+            const invalidTokenError =
+                typeof data === 'object' &&
+                (data.detail?.toString().toLowerCase().includes('token') ||
+                 data.detail?.toString().toLowerCase().includes('credentials') ||
+                 data.code === 'token_not_valid');
+
+            if (invalidTokenError || status === 401) {
+                localStorage.removeItem(ACCESS_TOKEN);
+                localStorage.removeItem('refresh');
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+            }
+        }
+
+        return Promise.reject(error);
+    }
+)
+
 export default api

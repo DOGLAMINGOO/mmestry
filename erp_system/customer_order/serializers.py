@@ -15,6 +15,7 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "po_number",
+            "po_date",
             "company",
             "company_name",
             "client",
@@ -34,7 +35,6 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = (
-            "po_number",
             "created_by",
             "created_by_username",
             "last_edited_by",
@@ -42,6 +42,13 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def validate(self, data):
+        if not data.get("po_number") or not str(data.get("po_number")).strip():
+            raise serializers.ValidationError({"po_number": "PO number must be entered manually and cannot be blank."})
+        if not data.get("po_date"):
+            raise serializers.ValidationError({"po_date": "Order date must be provided."})
+        return data
 
     def create(self, validated_data):
         # Set created_by from the authenticated user

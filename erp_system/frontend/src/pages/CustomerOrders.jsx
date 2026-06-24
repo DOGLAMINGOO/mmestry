@@ -77,7 +77,7 @@ function CustomerOrders() {
     }, [orders, searchField, searchTerm]);
 
     const renderStatusBadge = (status) => {
-        switch(status) {
+        switch (status) {
             case 'DRAFT': return <span style={{ padding: '4px 8px', background: '#f3f4f6', color: '#4b5563', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Draft</span>;
             case 'APPROVED': return <span style={{ padding: '4px 8px', background: '#dbeafe', color: '#1e40af', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>Approved</span>;
             case 'IN_PRODUCTION': return <span style={{ padding: '4px 8px', background: '#d1fae5', color: '#065f46', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>In Production</span>;
@@ -104,14 +104,14 @@ function CustomerOrders() {
             <h1>Customer Orders</h1>
 
             {/* Search Filters */}
-            <div style={{ 
-                display: 'flex', 
-                gap: '16px', 
-                marginBottom: '20px', 
-                alignItems: 'center', 
-                background: '#f9fafb', 
-                padding: '16px', 
-                borderRadius: '8px', 
+            <div style={{
+                display: 'flex',
+                gap: '16px',
+                marginBottom: '20px',
+                alignItems: 'center',
+                background: '#f9fafb',
+                padding: '16px',
+                borderRadius: '8px',
                 border: '1px solid #e5e7eb',
                 boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
             }}>
@@ -119,7 +119,7 @@ function CustomerOrders() {
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: '#374151' }}>
                         Filter Column By
                     </label>
-                    <Select 
+                    <Select
                         value={searchField}
                         onChange={(selected) => {
                             setSearchField(selected);
@@ -138,7 +138,7 @@ function CustomerOrders() {
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: '#374151' }}>
                         Search or Select {searchField.label}...
                     </label>
-                    <Select 
+                    <Select
                         value={searchTerm}
                         onChange={(selected) => setSearchTerm(selected)}
                         options={getSearchOptions()}
@@ -147,17 +147,17 @@ function CustomerOrders() {
                     />
                 </div>
                 {(searchTerm || searchField.value !== 'company_name') && (
-                    <button 
+                    <button
                         onClick={() => {
                             setSearchTerm(null);
                             setSearchField({ value: 'company_name', label: 'Company' });
                         }}
-                        style={{ 
+                        style={{
                             marginTop: '22px', // Align visually with the inputs accounting for labels
-                            padding: '10px 16px', 
-                            background: '#fee2e2', 
-                            border: '1px solid #fca5a5', 
-                            borderRadius: '6px', 
+                            padding: '10px 16px',
+                            background: '#fee2e2',
+                            border: '1px solid #fca5a5',
+                            borderRadius: '6px',
                             cursor: 'pointer',
                             fontWeight: 'bold',
                             color: '#b91c1c',
@@ -186,7 +186,7 @@ function CustomerOrders() {
                         Showing {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
                     </span>
                 </div>
-                
+
                 {ordersLoading && <div>Loading orders...</div>}
                 {ordersError && <div style={{ color: 'red' }}>{ordersError}</div>}
                 {!ordersLoading && !ordersError && orders.length === 0 && (

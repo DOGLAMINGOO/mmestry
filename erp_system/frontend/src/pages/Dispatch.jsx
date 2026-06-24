@@ -104,6 +104,11 @@ function Dispatch() {
     if (loading) return <div className="inventory-container">Loading...</div>;
     if (error) return <div className="inventory-container">{error}</div>;
 
+    const multiPartCounts = orders.reduce((counts, order) => {
+        counts[order.po_number] = (counts[order.po_number] || 0) + 1;
+        return counts;
+    }, {});
+
     return (
         <div className="inventory-container">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -141,7 +146,7 @@ function Dispatch() {
 
                             return (
                                 <tr key={order.id}>
-                                    <td><strong>{order.po_number}</strong></td>
+                                    <td><strong>{order.po_number}{multiPartCounts[order.po_number] > 1 ? ' *' : ''}</strong></td>
                                     <td>{order.part_name}</td>
                                     <td>{order.client_name}</td>
                                     <td>{new Date(order.deadline).toLocaleDateString()}</td>

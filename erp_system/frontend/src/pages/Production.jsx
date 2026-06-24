@@ -46,6 +46,10 @@ function Production() {
     if (loadingAuth) return <div>Loading Production Environment...</div>;
 
     const canManageProduction = userRole === 'ADMIN' || userRole === 'STOCK_MANAGER';
+    const multiPartCounts = approvedOrders.reduce((counts, order) => {
+        counts[order.po_number] = (counts[order.po_number] || 0) + 1;
+        return counts;
+    }, {});
 
     return (
         <div className="inventory-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '20px' }}>
@@ -97,7 +101,7 @@ function Production() {
                                         return (
                                         <tr key={order.id} style={{ background: isInProgress ? '#f0fdf4' : 'transparent' }}>
                                             <td style={{ fontWeight: 'bold' }}>
-                                                {order.po_number}
+                                                {order.po_number}{multiPartCounts[order.po_number] > 1 ? ' *' : ''}
                                                 {isInProgress && (
                                                     <span style={{ marginLeft: '8px', padding: '2px 6px', background: '#d1fae5', color: '#065f46', fontSize: '10px', borderRadius: '4px', textTransform: 'uppercase' }}>
                                                         In Progress
