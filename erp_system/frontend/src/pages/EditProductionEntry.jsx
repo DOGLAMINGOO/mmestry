@@ -7,6 +7,10 @@ function EditProductionEntry() {
     const { id } = useParams();
     const navigate = useNavigate();
 
+    useEffect(() => {
+        document.title = 'Edit Production Entry - MMestry';
+    }, []);
+
     const [report, setReport] = useState(null);
     const [machines, setMachines] = useState([]);
     const [operators, setOperators] = useState([]);

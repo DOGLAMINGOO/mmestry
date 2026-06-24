@@ -44,6 +44,10 @@ function CreateProductionEntry() {
         fetchData();
     }, [customerOrderId, navigate]);
 
+    useEffect(() => {
+        document.title = 'Start Production Entry - MMestry';
+    }, []);
+
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };

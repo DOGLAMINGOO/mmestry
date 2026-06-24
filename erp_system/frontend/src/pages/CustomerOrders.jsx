@@ -52,6 +52,10 @@ function CustomerOrders() {
     }, []);
 
     useEffect(() => {
+        document.title = 'Customer Orders - MMestry';
+    }, []);
+
+    useEffect(() => {
         const fetchUser = async () => {
             try {
                 const res = await api.get('/api/user/me/');

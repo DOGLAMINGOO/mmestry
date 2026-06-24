@@ -43,6 +43,10 @@ function Production() {
         initializeDashboard();
     }, []);
 
+    useEffect(() => {
+        document.title = 'Production Dashboard - MMestry';
+    }, []);
+
     if (loadingAuth) return <div>Loading Production Environment...</div>;
 
     const canManageProduction = userRole === 'ADMIN' || userRole === 'STOCK_MANAGER';

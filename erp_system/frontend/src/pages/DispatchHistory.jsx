@@ -17,6 +17,10 @@ function DispatchHistoryPage() {
         fetchHistory();
     }, []);
 
+    useEffect(() => {
+        document.title = 'Dispatch History - MMestry';
+    }, []);
+
     const fetchHistory = async () => {
         setLoading(true);
         try {

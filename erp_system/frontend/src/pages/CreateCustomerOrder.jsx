@@ -58,6 +58,10 @@ function CreateCustomerOrder() {
         fetchOptions();
     }, []);
 
+    useEffect(() => {
+        document.title = 'Create Order - MMestry';
+    }, []);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));

@@ -26,6 +26,10 @@ function Dispatch() {
         fetchEligibleOrders();
     }, []);
 
+    useEffect(() => {
+        document.title = 'Dispatch - MMestry';
+    }, []);
+
     const fetchEligibleOrders = async () => {
         try {
             const res = await api.get('/api/dispatch/eligible-orders/');

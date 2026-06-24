@@ -58,6 +58,10 @@ function InventoryDetail() {
         fetchData();
     }, [id]);
 
+    useEffect(() => {
+        document.title = item ? `${item.part_name} - Inventory Detail - MMestry` : 'Inventory Detail - MMestry';
+    }, [item]);
+
     if (loading) return <div>Loading...</div>;
     if (error) return <div>{error}</div>;
     if (!item) return <div>No data</div>;

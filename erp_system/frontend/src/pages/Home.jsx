@@ -1,9 +1,13 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 function Home() {
+    useEffect(() => {
+        document.title = 'Home - MMestry';
+    }, []);
+
     return (
         <div>
-            <title>Home page - MMestry</title>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
                 <p>Home page</p>
             </div>

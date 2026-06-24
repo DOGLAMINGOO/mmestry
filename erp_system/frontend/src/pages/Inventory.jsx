@@ -25,6 +25,10 @@ function Inventory() {
         getParts();
     }, []);
 
+    useEffect(() => {
+        document.title = 'Inventory - MMestry';
+    }, []);
+
     const getCompanies = async () => {
         try {
             const response = await api.get('/api/companies/');
