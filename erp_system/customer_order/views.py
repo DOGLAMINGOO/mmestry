@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
-from .models import CustomerOrder
+from .models import CustomerOrder, CustomerOrderLog
 from .serializers import CustomerOrderSerializer
 from .permissions import IsAdminOrManagerForWrite
 
@@ -83,6 +83,20 @@ class CustomerOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Soft delete
         instance.is_deleted = True
         instance.save()
+        CustomerOrderLog.objects.create(
+            customer_order=instance,
+            po_number=instance.po_number,
+            company_name=instance.company.name,
+            client_name=instance.client.name,
+            part_name=instance.part.name,
+            quantity=instance.quantity,
+            deadline=instance.deadline,
+            priority=instance.priority,
+            status=instance.status,
+            action_type=CustomerOrderLog.SOFT_DELETED,
+            reason="Soft deleted via API",
+            created_by=request.user if request.user.is_authenticated else None,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_destroy(self, instance):

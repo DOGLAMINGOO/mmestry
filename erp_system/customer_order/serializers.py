@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CustomerOrder
+from .models import CustomerOrder, CustomerOrderLog
 
 
 class CustomerOrderSerializer(serializers.ModelSerializer):
@@ -55,16 +55,50 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
             validated_data["created_by"] = request.user
-        return super().create(validated_data)
+
+        order = super().create(validated_data)
+        self._create_log(order, action_type=CustomerOrderLog.CREATED, reason="Created via API", user=request.user if request else None)
+        return order
 
     def update(self, instance, validated_data):
         # Require last_edit_reason on any update operation
         reason = validated_data.get("last_edit_reason", "").strip()
         if not reason:
             raise serializers.ValidationError({"last_edit_reason": "A reason for the edit must be provided."})
-        
+
         request = self.context.get("request")
         if request and request.user and request.user.is_authenticated:
             validated_data["last_edited_by"] = request.user
 
-        return super().update(instance, validated_data)
+        previous_status = instance.status
+        result = super().update(instance, validated_data)
+
+        action_type = CustomerOrderLog.EDITED
+        if previous_status != result.status:
+            action_type = CustomerOrderLog.STATUS_CHANGED
+
+        self._create_log(
+            result,
+            action_type=action_type,
+            reason=reason,
+            user=request.user if request else None,
+        )
+        return result
+
+    def _create_log(self, order, action_type, reason=None, user=None):
+        from .models import CustomerOrderLog
+
+        CustomerOrderLog.objects.create(
+            customer_order=order,
+            po_number=order.po_number,
+            company_name=order.company.name,
+            client_name=order.client.name,
+            part_name=order.part.name,
+            quantity=order.quantity,
+            deadline=order.deadline,
+            priority=order.priority,
+            status=order.status,
+            action_type=action_type,
+            reason=reason,
+            created_by=user if user and user.is_authenticated else None,
+        )

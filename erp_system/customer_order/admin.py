@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 
-from .models import CustomerOrder
+from .models import CustomerOrder, CustomerOrderLog
 
 
 User = get_user_model()
@@ -51,4 +51,45 @@ class CustomerOrderAdmin(ManagerOrAdminAddMixin, admin.ModelAdmin):
         if not obj.created_by_id:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(CustomerOrderLog)
+class CustomerOrderLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "po_number",
+        "action_type",
+        "company_name",
+        "client_name",
+        "part_name",
+        "status",
+        "quantity",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("action_type", "status", "company_name", "client_name", "created_at")
+    search_fields = ("po_number", "company_name", "client_name", "part_name", "reason")
+    readonly_fields = (
+        "customer_order",
+        "po_number",
+        "company_name",
+        "client_name",
+        "part_name",
+        "quantity",
+        "deadline",
+        "priority",
+        "status",
+        "action_type",
+        "reason",
+        "created_by",
+        "created_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 

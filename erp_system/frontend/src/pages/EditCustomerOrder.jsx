@@ -3,10 +3,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
 import '../styles/Inventory.css';
+import { loadDraft, useSaveDraft, clearDraft } from '../hooks/useFormDraft';
 
 function EditCustomerOrder() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const draftKey = `customer-order-edit-draft-${id}`;
 
     const [companies, setCompanies] = useState([]);
     const [clients, setClients] = useState([]);
@@ -16,18 +18,22 @@ function EditCustomerOrder() {
     const [submitting, setSubmitting] = useState(false);
     const [userRole, setUserRole] = useState(null);
 
-    const [form, setForm] = useState({
-        company: '',
-        client: '',
-        part: '',
-        quantity: '',
-        deadline: '',
-        priority: 'MEDIUM',
-        status: 'DRAFT',
-        po_number: '',
-        order_date: '',
-        last_edit_reason: '',
-    });
+    const [form, setForm] = useState(() =>
+        loadDraft(draftKey, {
+            company: '',
+            client: '',
+            part: '',
+            quantity: '',
+            deadline: '',
+            priority: 'MEDIUM',
+            status: 'DRAFT',
+            po_number: '',
+            order_date: '',
+            last_edit_reason: '',
+        })
+    );
+
+    useSaveDraft(draftKey, form);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -48,19 +54,22 @@ function EditCustomerOrder() {
                 // Fetch existing order data
                 const orderRes = await api.get(`/api/customer-orders/${id}/`);
                 const order = orderRes.data;
+                const existingDraft = loadDraft(draftKey, null);
 
-                setForm({
-                    company: order.company || '',
-                    client: order.client || '',
-                    part: order.part || '',
-                    quantity: order.quantity || '',
-                    deadline: order.deadline || '',
-                    priority: order.priority || 'MEDIUM',
-                    status: order.status || 'DRAFT',
-                    po_number: order.po_number || '',
-                    order_date: order.po_date || '',
-                    last_edit_reason: '', // Mandatory empty on load
-                });
+                if (!existingDraft) {
+                    setForm({
+                        company: order.company || '',
+                        client: order.client || '',
+                        part: order.part || '',
+                        quantity: order.quantity || '',
+                        deadline: order.deadline || '',
+                        priority: order.priority || 'MEDIUM',
+                        status: order.status || 'DRAFT',
+                        po_number: order.po_number || '',
+                        order_date: order.po_date || '',
+                        last_edit_reason: '', // Mandatory empty on load
+                    });
+                }
 
             } catch (err) {
                 console.error('Failed to load edit customer order data', err);
@@ -127,6 +136,7 @@ function EditCustomerOrder() {
                 status: form.status,
                 last_edit_reason: form.last_edit_reason.trim(),
             });
+            clearDraft(draftKey);
             alert('Customer order updated successfully');
             navigate('/customer-orders');
         } catch (err) {

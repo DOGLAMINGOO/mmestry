@@ -1,7 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login.jsx'
-import Register from './pages/Register.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
 import Inventory from './pages/Inventory.jsx'
@@ -21,13 +20,6 @@ function Logout() {
   return <Navigate to="/login" />
 }
 
-
-function RegisterAndLogout() {
-  localStorage.clear()                //good habit to clear any previous tokens while registering
-  return <Register />
-}
-
-
 function App() {
   return (
     <>
@@ -35,7 +27,6 @@ function App() {
         <Routes>
           <Route path='/login' element={<Login />} />
           <Route path='/logout' element={<Logout />} />
-          <Route path='/register' element={<RegisterAndLogout />} />
           <Route
             path='/'
             element={

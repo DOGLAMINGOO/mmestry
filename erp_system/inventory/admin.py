@@ -76,6 +76,20 @@ class InventoryLogAdmin(admin.ModelAdmin):
     Allow all staff roles to view logs, but nobody edits/deletes them directly.
     """
 
+    list_display = (
+        "inventory",
+        "change_type",
+        "quantity",
+        "reason",
+        "created_by",
+        "created_at",
+    )
+    list_filter = ("change_type", "created_by", "created_at")
+    search_fields = (
+        "inventory__company__name",
+        "inventory__part__name",
+        "reason",
+    )
     readonly_fields = (
         "inventory",
         "change_type",

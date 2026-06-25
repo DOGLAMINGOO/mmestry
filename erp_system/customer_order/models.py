@@ -84,3 +84,51 @@ class CustomerOrder(models.Model):
 
     def __str__(self):
         return self.po_number or f"Order for {self.client} ({self.part})"
+
+
+class CustomerOrderLog(models.Model):
+    CREATED = "CREATED"
+    EDITED = "EDITED"
+    STATUS_CHANGED = "STATUS_CHANGED"
+    SOFT_DELETED = "SOFT_DELETED"
+
+    ACTION_CHOICES = [
+        (CREATED, "Created"),
+        (EDITED, "Edited"),
+        (STATUS_CHANGED, "Status Changed"),
+        (SOFT_DELETED, "Soft Deleted"),
+    ]
+
+    customer_order = models.ForeignKey(
+        CustomerOrder,
+        on_delete=models.CASCADE,
+        related_name="logs",
+    )
+    po_number = models.CharField(max_length=50)
+    company_name = models.CharField(max_length=255)
+    client_name = models.CharField(max_length=255)
+    part_name = models.CharField(max_length=255)
+    quantity = models.PositiveIntegerField()
+    deadline = models.DateField()
+    priority = models.CharField(max_length=10, choices=CustomerOrder.PRIORITY_CHOICES, default=CustomerOrder.PRIORITY_MEDIUM)
+    status = models.CharField(max_length=32, choices=CustomerOrder.STATUS_CHOICES, default=CustomerOrder.STATUS_DRAFT)
+
+    action_type = models.CharField(max_length=32, choices=ACTION_CHOICES)
+    reason = models.TextField(null=True, blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_customer_order_logs",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Customer Order Log"
+        verbose_name_plural = "Customer Order Logs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_action_type_display()} - {self.po_number}"

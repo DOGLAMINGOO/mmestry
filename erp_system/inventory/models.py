@@ -133,7 +133,13 @@ class InventoryLog(models.Model):
     )
 
     class Meta:
+        verbose_name = "Inventory Log"
+        verbose_name_plural = "Inventory Logs"
         ordering = ["-created_at"]
+
+    def __str__(self):
+        inventory_label = f"{self.inventory.company.name} / {self.inventory.part.name}" if self.inventory_id else "Unknown inventory"
+        return f"{self.get_change_type_display()} - {inventory_label} ({self.quantity})"
 
 
 class StockReceipt(models.Model):
