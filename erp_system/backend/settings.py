@@ -125,11 +125,22 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #     }
 # }
 
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=os.environ.get('DATABASE_URL'),
+#         conn_max_age=300,            
+#         ssl_require=True
+#     )
+# }
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
+    'default': dj_database_url.parse(
+        os.environ.get('DATABASE_URL'),
+        conn_max_age=300,            # Matches Neon's 5-minute auto-sleep timer
+        ssl_require=True             # Neon strictly requires SSL
     )
 }
+
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 # Enforce SSL for production PostgreSQL database on Render
 if not DEBUG:
