@@ -78,10 +78,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     # CORS middleware should be placed as high as possible
     "whitenoise.middleware.WhiteNoiseMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -111,19 +111,6 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# PostgreSQL (preferred). Override with env: DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT.
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.environ.get("DB_NAME", "erp_system"),
-#         "USER": os.environ.get("DB_USER", "postgres"),
-#         "PASSWORD": os.environ.get("DB_PASSWORD", "kaustubh092725"),
-#         "HOST": os.environ.get("DB_HOST", "localhost"),
-#         "PORT": os.environ.get("DB_PORT", "5432"),
-#     }
-# }
 
 # DATABASES = {
 #     'default': dj_database_url.config(
@@ -132,22 +119,23 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 #         ssl_require=True
 #     )
 # }
+
+# Step 1: Safely parse whatever URL is active in DATABASE_URL
+database_url = os.environ.get('DATABASE_URL', '')
+
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.environ.get('DATABASE_URL'),
-        conn_max_age=300,            # Matches Neon's 5-minute auto-sleep timer
-        ssl_require=True             # Neon strictly requires SSL
+    'default': dj_database_url.config(
+        default=database_url,
+        conn_max_age=300
     )
 }
 
-DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-
-# Enforce SSL for production PostgreSQL database on Render
-if not DEBUG:
+if "neon.tech" in database_url or not DEBUG:
+    DATABASES['default']['ssl_require'] = True
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     DATABASES['default']['OPTIONS'] = {
         'sslmode': 'require',
     }
-
 
 
 # Password validation
