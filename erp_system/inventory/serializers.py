@@ -8,6 +8,7 @@ class InventorySerializer(serializers.ModelSerializer):
     part_name = serializers.CharField(source="part.name", read_only=True)
     part_number = serializers.CharField(source="part.part_number", read_only=True)
     part_description = serializers.CharField(source="part.description", read_only=True)
+    cycle_time_minutes = serializers.IntegerField(source="part.cycle_time_minutes", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True)
     # replaced added_by/updated_by with last adjustment info (annotated in queryset)
     last_adjusted_by = serializers.CharField(read_only=True)
@@ -26,6 +27,7 @@ class InventorySerializer(serializers.ModelSerializer):
             "part_number",
             "part_name",
             "part_description",
+            "cycle_time_minutes",
             "total_blanks",
             "finished_blanks",
             "reserved_blanks",

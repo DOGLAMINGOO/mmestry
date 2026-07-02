@@ -92,7 +92,7 @@ function InventoryDetail() {
                                 {item.available_blanks}
                             </span>
                         </div>
-                        <div><strong>Finished Blanks:</strong> {item.finished_blanks}</div>
+                        <div><strong>Finished Parts:</strong> {item.finished_blanks}</div>
                     </div>
                 </div>
 

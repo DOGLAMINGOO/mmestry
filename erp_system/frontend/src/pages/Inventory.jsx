@@ -295,7 +295,7 @@ function Inventory() {
                                 <th>Total Blanks</th>
                                 <th>Reserved Blanks</th>
                                 <th>Available Blanks</th>
-                                <th>Finished Blanks</th>
+                                <th>Finished Parts</th>
 
                                 <th>Last Adjusted By</th>
                                 <th>Last Adjusted At</th>
@@ -312,7 +312,11 @@ function Inventory() {
                                     <td>
                                         <span
                                             onClick={() => navigate(`/inventory/${item.id}`)}
-                                            title={`Part: ${item.part_number} - ${item.part_name}${item.part_description ? `\nDescription: ${item.part_description}` : ''}`}
+                                            title={[
+                                                item.part_name ? `Part Name: ${item.part_name}` : null,
+                                                item.part_description ? `Description: ${item.part_description}` : null,
+                                                item.cycle_time_minutes != null ? `Cycle Time: ${item.cycle_time_minutes} min` : null,
+                                            ].filter(Boolean).join('\n')}
                                             style={{
                                                 cursor: 'pointer',
                                                 color: '#2563eb',
@@ -322,7 +326,7 @@ function Inventory() {
                                             onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
                                             onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
                                         >
-                                            {item.part_name}
+                                            {item.part_number || item.part_name}
                                         </span>
                                     </td>
                                     <td>{item.total_blanks}</td>
