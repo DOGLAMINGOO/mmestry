@@ -3,6 +3,7 @@ from .models import DispatchHistory, DispatchOrder
 
 @admin.register(DispatchHistory)
 class DispatchHistoryAdmin(admin.ModelAdmin):
+    list_per_page = 25
     list_display = (
         "po_number",
         "client_name",

@@ -11,7 +11,8 @@ function NotificationBell() {
     const fetchOrders = async () => {
         try {
             const res = await api.get('/api/customer-orders/');
-            setOrders(res.data);
+            const data = res.data;
+            setOrders(Array.isArray(data) ? data : data.results || []);
         } catch (err) {
             console.error('Failed to fetch orders for notifications', err);
         }

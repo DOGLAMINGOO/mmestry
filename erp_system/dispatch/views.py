@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django.db.models import Q
 from .models import DispatchHistory
@@ -12,6 +13,7 @@ class DispatchViewSet(viewsets.ModelViewSet):
     queryset = DispatchHistory.objects.all()
     serializer_class = DispatchHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PageNumberPagination
 
     @action(detail=False, methods=['get'], url_path='eligible-orders')
     def eligible_orders(self, request):
@@ -61,6 +63,11 @@ class DispatchViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(dispatched_at__date__gte=start_date)
         if end_date:
             queryset = queryset.filter(dispatched_at__date__lte=end_date)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = DispatchHistorySerializer(queryset, many=True)
         return Response(serializer.data)

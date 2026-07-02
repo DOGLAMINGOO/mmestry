@@ -4,6 +4,7 @@ import '../styles/Inventory.css';
 
 function DispatchHistoryPage() {
     const [history, setHistory] = useState([]);
+    const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
     const [loading, setLoading] = useState(true);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [filters, setFilters] = useState({
@@ -21,12 +22,24 @@ function DispatchHistoryPage() {
         document.title = 'Dispatch History - MMestry';
     }, []);
 
-    const fetchHistory = async () => {
+    const fetchHistory = async (url) => {
         setLoading(true);
         try {
-            const query = new URLSearchParams(filters).toString();
-            const res = await api.get(`/api/dispatch/history/?${query}`);
-            setHistory(res.data);
+            const requestUrl = url || `/api/dispatch/history/?${new URLSearchParams(filters).toString()}`;
+            const res = await api.get(requestUrl);
+            const data = res.data;
+
+            if (data && Array.isArray(data.results)) {
+                setHistory(data.results);
+                setPagination({
+                    next: data.next,
+                    previous: data.previous,
+                    count: data.count,
+                });
+            } else {
+                setHistory(Array.isArray(data) ? data : []);
+                setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+            }
         } catch (err) {
             alert('Failed to fetch dispatch history.');
         } finally {
@@ -45,11 +58,7 @@ function DispatchHistoryPage() {
     const handleClearFilters = () => {
         const cleared = { client: '', company: '', start_date: '', end_date: '' };
         setFilters(cleared);
-        setLoading(true);
-        api.get('/api/dispatch/history/').then(res => {
-            setHistory(res.data);
-            setLoading(false);
-        });
+        fetchHistory();
     };
 
     const getQcReportUrl = (path) => {
@@ -200,6 +209,44 @@ function DispatchHistoryPage() {
                     </tbody>
                 </table>
             </div>
+
+            {pagination.count > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
+                    <div style={{ color: '#475569' }}>
+                        Showing {history.length} of {pagination.count} records
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                            onClick={() => fetchHistory(pagination.previous)}
+                            disabled={!pagination.previous || loading}
+                            style={{
+                                padding: '10px 16px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                background: pagination.previous ? '#fff' : '#f8fafc',
+                                color: pagination.previous ? '#111827' : '#9ca3af',
+                                cursor: pagination.previous ? 'pointer' : 'not-allowed'
+                            }}
+                        >
+                            Previous
+                        </button>
+                        <button
+                            onClick={() => fetchHistory(pagination.next)}
+                            disabled={!pagination.next || loading}
+                            style={{
+                                padding: '10px 16px',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                background: pagination.next ? '#2563eb' : '#f8fafc',
+                                color: pagination.next ? '#fff' : '#9ca3af',
+                                cursor: pagination.next ? 'pointer' : 'not-allowed'
+                            }}
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Detailed Dispatch Modal */}
             {selectedRecord && (
