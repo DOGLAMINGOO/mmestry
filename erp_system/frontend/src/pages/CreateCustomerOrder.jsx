@@ -349,10 +349,6 @@ function CreateCustomerOrder() {
                             >
                                 <option value="DRAFT">Draft</option>
                                 <option value="APPROVED">Approved</option>
-                                <option value="IN_PRODUCTION">In production</option>
-                                <option value="READY_FOR_DISPATCH">Ready for dispatch</option>
-                                <option value="DISPATCHED">Dispatched</option>
-                                <option value="CLOSED">Closed</option>
                             </select>
                         </label>
 
