@@ -175,7 +175,25 @@ function Inventory() {
 
     return (
         <div className="inventory-container">
-            <a href='/'><button>Go to home page</button></a>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => navigate('/')}>Back to Home</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/inventory-logs')}
+                        style={{ background: '#4b5563', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                        View Inventory Logs
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/stock-receipt-logs')}
+                        style={{ background: '#4b5563', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                        View Receipt Logs
+                    </button>
+                </div>
+            </div>
             <h1>Inventory</h1>
 
             {/* Inventory is read-only in the frontend. Adjustments are performed via business events or by superusers using Adjust. */}
@@ -431,7 +449,7 @@ function Inventory() {
                                 <span style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>Field*</span>
                                 <select name="field" value={adjustForm.field} onChange={handleAdjustChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #d1d5db' }}>
                                     <option value="blanks">Total Blanks</option>
-                                    <option value="finished">Finished Blanks</option>
+                                    <option value="finished">Finished Parts</option>
                                 </select>
                             </label>
 

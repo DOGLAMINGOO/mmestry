@@ -54,12 +54,14 @@ class CustomerOrder(models.Model):
     client = models.ForeignKey(Client, on_delete=models.PROTECT, related_name="customer_orders")
     part = models.ForeignKey(Part, on_delete=models.PROTECT, related_name="customer_orders")
     quantity = models.PositiveIntegerField()
+    shipped_quantity = models.PositiveIntegerField(default=0, help_text="Total quantity shipped so far.")
     deadline = models.DateField()
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     last_edit_reason = models.TextField(blank=True, null=True, help_text="Reason for the last edit.")
     qc_report = models.FileField(upload_to="qc_reports/", null=True, blank=True)
     is_deleted = models.BooleanField(default=False, help_text="Soft deletion flag.")
+    is_short_closed = models.BooleanField(default=False, help_text="Marked as short-closed: no further shipments will be accepted.")
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

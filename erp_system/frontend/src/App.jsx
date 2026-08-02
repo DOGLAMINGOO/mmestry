@@ -13,6 +13,10 @@ import CreateProductionEntry from './pages/CreateProductionEntry.jsx'
 import EditProductionEntry from './pages/EditProductionEntry.jsx'
 import Dispatch from './pages/Dispatch.jsx'
 import DispatchHistoryPage from './pages/DispatchHistory.jsx'
+import ProductionReportsHistory from './pages/ProductionReportsHistory.jsx'
+import InventoryLogs from './pages/InventoryLogs.jsx'
+import StockReceiptLogs from './pages/StockReceiptLogs.jsx'
+import CustomerOrderLogs from './pages/CustomerOrderLogs.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 function Logout() {
@@ -108,6 +112,38 @@ function App() {
             element={
               <ProtectedRoute>
                 <DispatchHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/production-reports'
+            element={
+              <ProtectedRoute>
+                <ProductionReportsHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/inventory-logs'
+            element={
+              <ProtectedRoute>
+                <InventoryLogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/stock-receipt-logs'
+            element={
+              <ProtectedRoute>
+                <StockReceiptLogs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/customer-order-logs'
+            element={
+              <ProtectedRoute>
+                <CustomerOrderLogs />
               </ProtectedRoute>
             }
           />

@@ -14,6 +14,7 @@ function EditProductionEntry() {
     const [report, setReport] = useState(null);
     const [machines, setMachines] = useState([]);
     const [operators, setOperators] = useState([]);
+    const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
@@ -38,22 +39,24 @@ function EditProductionEntry() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [reportRes, machRes, opRes] = await Promise.all([
+                const [reportRes, machRes, opRes, userRes] = await Promise.all([
                     api.get(`/api/production-reports/${id}/`),
                     api.get('/api/machines/'),
-                    api.get('/api/operators/')
+                    api.get('/api/operators/'),
+                    api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
                 
                 const data = reportRes.data;
                 setReport(data);
                 setMachines(machRes.data.map(m => ({ value: m.name, label: m.name })));
                 setOperators(opRes.data.map(o => ({ value: o.name, label: o.name })));
+                setUserRole(userRes.data.role || null);
                 
                 setForm({
                     machine_name: data.machine_name || '',
                     operator_name: data.operator_name || '',
                     start_time: data.start_time ? data.start_time.slice(0, 16) : '',
-                    produced_quantity: data.produced_quantity || '',
+                    produced_quantity: '',
                     scrap_quantity: data.scrap_quantity || '0',
                     end_time: data.end_time ? data.end_time.slice(0, 16) : new Date().toISOString().slice(0, 16),
                     operator_working_hours: data.operator_working_hours || '',
@@ -122,8 +125,24 @@ function EditProductionEntry() {
     if (loading) return <div style={{ padding: '20px' }}>Loading production data...</div>;
     if (!report) return null;
 
+    const canEdit = userRole === 'ADMIN' || userRole === 'STOCK_MANAGER';
+    if (!canEdit) {
+        return (
+            <div className="inventory-container" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}>
+                <button type="button" onClick={() => navigate('/production')} style={{ marginBottom: 16 }}>
+                    Back to Dashboard
+                </button>
+                <h1>Access Restricted</h1>
+                <p>You do not have permission to edit production entries.</p>
+            </div>
+        );
+    }
+
     const co = report.customer_order_details;
     const isCompleted = report.status === 'COMPLETED';
+    const targetQty = Number(report.required_quantity ?? co?.quantity ?? 0);
+    const finishedQty = Number(report.produced_quantity ?? 0);
+    const remainingQty = Math.max(0, targetQty - finishedQty);
 
     return (
         <div className="inventory-container" style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -141,9 +160,51 @@ function EditProductionEntry() {
                     <div><strong>Client:</strong> <br/>{co?.client_name}</div>
                     
                     <div style={{ background: '#e0f2fe', padding: '8px', borderRadius: '4px', gridColumn: 'span 3', border: '1px solid #bae6fd', marginTop: '8px' }}>
-                        <strong>Required Target Quantity:</strong> {co?.quantity}
+                        <strong>Required Target Quantity:</strong> {targetQty}
+                    </div>
+                    <div style={{ background: '#ecfeff', padding: '8px', borderRadius: '4px', gridColumn: 'span 3', border: '1px solid #a5f3fc', marginTop: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                            <div><strong>Req Qty:</strong> {targetQty}</div>
+                            <div><strong>Finished Qty:</strong> {finishedQty}</div>
+                            <div><strong>Remaining:</strong> {remainingQty}</div>
+                        </div>
+                        <div style={{ marginTop: '6px', fontSize: '12px', color: '#0f766e' }}>
+                            Enter the additional finished quantity for this update. The system will add it to the previously saved total.
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            <div style={{ background: '#fff7ed', border: '1px solid #fdba74', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
+                <h3 style={{ marginTop: 0, marginBottom: '12px', color: '#9a2c00' }}>Production Entry Log</h3>
+                {Array.isArray(report.entry_logs) && report.entry_logs.length > 0 ? (
+                    <div style={{ display: 'grid', gap: '10px' }}>
+                        {report.entry_logs.slice().reverse().map((entry, index) => (
+                            <details key={`${entry.saved_at}-${index}`} style={{ border: '1px solid #fed7aa', borderRadius: '6px', padding: '10px', background: '#fffbeb' }}>
+                                <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#9a2c00' }}>
+                                    Save {report.entry_logs.length - index} • {new Date(entry.saved_at).toLocaleString()}
+                                </summary>
+                                <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px', fontSize: '13px' }}>
+                                    <div><strong>Qty Added:</strong> {entry.delta?.produced_quantity ?? 0}</div>
+                                    <div><strong>Finished Total:</strong> {entry.totals?.produced_quantity ?? 0}</div>
+                                    <div><strong>Working Hrs:</strong> {entry.delta?.operator_working_hours ?? 0}</div>
+                                    <div><strong>Working Hrs Total:</strong> {entry.totals?.operator_working_hours ?? 0}</div>
+                                    <div><strong>Parts in Working Hrs:</strong> {entry.delta?.parts_made_in_working_hours ?? 0}</div>
+                                    <div><strong>Parts in Working Hrs Total:</strong> {entry.totals?.parts_made_in_working_hours ?? 0}</div>
+                                    <div><strong>Overtime Hrs:</strong> {entry.delta?.operator_overtime_hours ?? 0}</div>
+                                    <div><strong>Overtime Hrs Total:</strong> {entry.totals?.operator_overtime_hours ?? 0}</div>
+                                    <div><strong>Overtime Parts:</strong> {entry.delta?.parts_made_in_overtime ?? 0}</div>
+                                    <div><strong>Overtime Parts Total:</strong> {entry.totals?.parts_made_in_overtime ?? 0}</div>
+                                    <div><strong>Idle Hrs:</strong> {entry.delta?.idle_time_hours ?? 0}</div>
+                                    <div><strong>Idle Hrs Total:</strong> {entry.totals?.idle_time_hours ?? 0}</div>
+                                    <div style={{ gridColumn: 'span 2' }}><strong>Idle Reason:</strong> {entry.totals?.idle_reason || '-'}</div>
+                                </div>
+                            </details>
+                        ))}
+                    </div>
+                ) : (
+                    <p style={{ margin: 0, color: '#9a2c00' }}>No saved day details yet. Saving the form will create a new log entry.</p>
+                )}
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -195,7 +256,7 @@ function EditProductionEntry() {
                 </div>
 
                 <label>
-                    Produced Quantity (Good Parts) *
+                    Additional Finished Qty (this update) *
                     <input
                         type="number"
                         min="0"

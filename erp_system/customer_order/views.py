@@ -1,10 +1,37 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 
 from .models import CustomerOrder, CustomerOrderLog
-from .serializers import CustomerOrderSerializer
+from .serializers import CustomerOrderSerializer, CustomerOrderLogSerializer
 from .permissions import IsAdminOrManagerForWrite
+
+
+class CustomerOrderLogPagination(PageNumberPagination):
+    page_size = 25
+
+
+class CustomerOrderLogListView(generics.ListAPIView):
+    serializer_class = CustomerOrderLogSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomerOrderLogPagination
+
+    def get_queryset(self):
+        queryset = CustomerOrderLog.objects.select_related("customer_order", "created_by").order_by("-created_at")
+
+        po_number = self.request.query_params.get("po_number")
+        action_type = self.request.query_params.get("action_type")
+        company = self.request.query_params.get("company")
+
+        if po_number:
+            queryset = queryset.filter(po_number__icontains=po_number)
+        if action_type:
+            queryset = queryset.filter(action_type=action_type)
+        if company:
+            queryset = queryset.filter(company_name__icontains=company)
+
+        return queryset
 
 
 class CustomerOrderListCreateView(generics.ListCreateAPIView):

@@ -3,12 +3,43 @@ from rest_framework import serializers
 from .models import CustomerOrder, CustomerOrderLog
 
 
+class CustomerOrderLogSerializer(serializers.ModelSerializer):
+    action_type_display = serializers.CharField(source="get_action_type_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+
+    class Meta:
+        model = CustomerOrderLog
+        fields = (
+            "id",
+            "customer_order",
+            "po_number",
+            "company_name",
+            "client_name",
+            "part_name",
+            "quantity",
+            "deadline",
+            "priority",
+            "status",
+            "status_display",
+            "action_type",
+            "action_type_display",
+            "reason",
+            "created_by",
+            "created_by_username",
+            "created_at",
+        )
+
+
 class CustomerOrderSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     client_name = serializers.CharField(source="client.name", read_only=True)
     part_name = serializers.CharField(source="part.name", read_only=True)
+    part_description = serializers.CharField(source="part.description", read_only=True, default="")
+    part_number = serializers.CharField(source="part.part_number", read_only=True, default="")
     created_by_username = serializers.CharField(source="created_by.username", read_only=True)
     last_edited_by_username = serializers.CharField(source="last_edited_by.username", read_only=True)
+    remaining_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomerOrder
@@ -22,10 +53,15 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
             "client_name",
             "part",
             "part_name",
+            "part_description",
+            "part_number",
             "quantity",
+            "shipped_quantity",
+            "remaining_quantity",
             "deadline",
             "priority",
             "status",
+            "is_short_closed",
             "last_edit_reason",
             "created_by",
             "created_by_username",
@@ -41,7 +77,13 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
             "last_edited_by_username",
             "created_at",
             "updated_at",
+            "shipped_quantity",
+            "is_short_closed",
         )
+
+    def get_remaining_quantity(self, obj):
+        """Calculate remaining quantity to be shipped"""
+        return obj.quantity - obj.shipped_quantity
 
     def validate(self, data):
         if not data.get("po_number") or not str(data.get("po_number")).strip():

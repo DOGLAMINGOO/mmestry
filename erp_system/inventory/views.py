@@ -1,8 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from .models import Inventory, InventoryLog, StockReceipt
-from .serializers import InventorySerializer, StockReceiptSerializer
+from .serializers import InventorySerializer, StockReceiptSerializer, InventoryLogSerializer
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.contenttypes.models import ContentType
@@ -12,6 +13,67 @@ from django.db.models import OuterRef, Subquery, DateTimeField, CharField, Sum, 
 from django.db.models.functions import Coalesce
 from customer_order.models import CustomerOrder
 from .permissions import CanAdjustInventory
+
+
+class HistoryPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = "page_size"
+    max_page_size = 1000
+
+
+class InventoryLogListView(generics.ListAPIView):
+    serializer_class = InventoryLogSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = HistoryPagination
+
+    def get_queryset(self):
+        queryset = InventoryLog.objects.select_related(
+            "inventory",
+            "inventory__company",
+            "inventory__part",
+            "created_by",
+        ).order_by("-created_at")
+
+        change_type = self.request.query_params.get("change_type")
+        company = self.request.query_params.get("company")
+        part = self.request.query_params.get("part")
+
+        if change_type:
+            queryset = queryset.filter(change_type=change_type)
+        if company:
+            queryset = queryset.filter(inventory__company__name__icontains=company)
+        if part:
+            queryset = queryset.filter(inventory__part__name__icontains=part)
+
+        return queryset
+
+
+class StockReceiptListCreateView(generics.ListCreateAPIView):
+    queryset = StockReceipt.objects.select_related("company", "part", "received_by").order_by("-received_at")
+    serializer_class = StockReceiptSerializer
+    pagination_class = HistoryPagination
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), CanAdjustInventory()]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        receipt = serializer.save(received_by=user)
+
+        company = receipt.company
+        part = receipt.part
+        qty = receipt.quantity
+
+        inventory, _created = Inventory.objects.get_or_create(
+            company=company,
+            part=part,
+            defaults={"total_blanks": 0, "finished_blanks": 0},
+        )
+
+        reason = f"PO Received: {receipt.invoice_number} from {receipt.supplier_name}"
+        inventory.increase_blanks(qty, user, change_type=InventoryLog.PO_RECEIVED, reason=reason)
 
 
 class InventoryView(generics.ListAPIView):
@@ -162,30 +224,3 @@ class InventoryAdjustView(APIView):
 
         serializer = InventorySerializer(annotated, context={"request": request})
         return Response(serializer.data)
-
-
-class StockReceiptCreateView(generics.CreateAPIView):
-    queryset = StockReceipt.objects.all()
-    serializer_class = StockReceiptSerializer
-    permission_classes = [IsAuthenticated, CanAdjustInventory]
-
-    def perform_create(self, serializer):
-        user = self.request.user
-        # Save the receipt first
-        receipt = serializer.save(received_by=user)
-        
-        # Now update inventory
-        company = receipt.company
-        part = receipt.part
-        qty = receipt.quantity
-        
-        # get_or_create inventory if it doesn't exist
-        inventory, created = Inventory.objects.get_or_create(
-            company=company,
-            part=part,
-            defaults={'total_blanks': 0, 'finished_blanks': 0}
-        )
-        
-        # Increase blanks and log the transaction
-        reason = f"PO Received: {receipt.invoice_number} from {receipt.supplier_name}"
-        inventory.increase_blanks(qty, user, change_type=InventoryLog.PO_RECEIVED, reason=reason)

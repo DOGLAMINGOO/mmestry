@@ -95,15 +95,24 @@ function CustomerOrders() {
 
     return (
         <div className="inventory-container">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => navigate('/')}>
                     Back to Home
                 </button>
-                {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
-                    <button type="button" onClick={() => navigate('/customer-orders/new')}>
-                        Create New Order
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/customer-order-logs')}
+                        style={{ background: '#4b5563', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                        View Customer Order Logs
                     </button>
-                )}
+                    {(userRole === 'ADMIN' || userRole === 'MANAGER') && (
+                        <button type="button" onClick={() => navigate('/customer-orders/new')}>
+                            Create New Order
+                        </button>
+                    )}
+                </div>
             </div>
             <h1>Customer Orders</h1>
 
@@ -236,7 +245,7 @@ function CustomerOrders() {
                                         <td>{order.created_at ? new Date(order.created_at).toLocaleString() : '-'}</td>
                                         <td>{order.last_edited_by_username || '-'}</td>
                                         <td>
-                                            {(userRole === 'ADMIN' || userRole === 'MANAGER') && order.status !== 'DISPATCHED' && (
+                                            {(userRole === 'ADMIN' || userRole === 'MANAGER' || userRole === 'STOCK_MANAGER') && order.status !== 'DISPATCHED' && (
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
                                                         onClick={() => navigate(`/customer-orders/edit/${order.id}`)}

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.admin.models import LogEntry, ADDITION, CHANGE
 from django.contrib.contenttypes.models import ContentType
-from .models import Inventory, StockReceipt
+from .models import Inventory, InventoryLog, StockReceipt
 
 
 class InventorySerializer(serializers.ModelSerializer):
@@ -101,8 +101,47 @@ class InventorySerializer(serializers.ModelSerializer):
         return representation
 
 
+class InventoryLogSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source="inventory.company.name", read_only=True)
+    part_name = serializers.CharField(source="inventory.part.name", read_only=True)
+    change_type_display = serializers.CharField(source="get_change_type_display", read_only=True)
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+
+    class Meta:
+        model = InventoryLog
+        fields = (
+            "id",
+            "inventory",
+            "company_name",
+            "part_name",
+            "change_type",
+            "change_type_display",
+            "quantity",
+            "reason",
+            "created_by",
+            "created_by_username",
+            "created_at",
+        )
+
+
 class StockReceiptSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source="company.name", read_only=True)
+    part_name = serializers.CharField(source="part.name", read_only=True)
+    received_by_username = serializers.CharField(source="received_by.username", read_only=True)
+
     class Meta:
         model = StockReceipt
-        fields = "__all__"
+        fields = (
+            "id",
+            "company",
+            "company_name",
+            "part",
+            "part_name",
+            "quantity",
+            "supplier_name",
+            "invoice_number",
+            "received_at",
+            "received_by",
+            "received_by_username",
+        )
         read_only_fields = ("received_by", "received_at")

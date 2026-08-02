@@ -37,15 +37,17 @@ class CustomerOrderAdmin(ManagerOrAdminAddMixin, admin.ModelAdmin):
         "client",
         "part",
         "quantity",
+        "shipped_quantity",
+        "status",
+        "is_short_closed",
         "deadline",
         "priority",
-        "status",
         "created_by",
         "created_at",
     )
-    list_filter = ("company", "client", "part", "priority", "status", "deadline", "created_at")
+    list_filter = ("company", "client", "part", "priority", "status", "is_short_closed", "deadline", "created_at")
     search_fields = ("po_number", "client__name", "part__name")
-    readonly_fields = ("po_number", "created_by", "created_at", "updated_at")
+    readonly_fields = ("po_number", "created_by", "created_at", "updated_at", "shipped_quantity", "is_short_closed")
 
     def save_model(self, request, obj, form, change):
         if not obj.created_by_id:

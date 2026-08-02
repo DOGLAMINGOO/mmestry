@@ -59,6 +59,7 @@ class ProductionReport(models.Model):
     
     idle_time_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, default=0.00)
     idle_reason = models.TextField(blank=True, null=True, help_text="Mandatory if idle_time_hours > 0")
+    entry_logs = models.JSONField(default=list, blank=True)
     
     # Quality & Feedback
     job_rating = models.CharField(max_length=20, choices=RATING_CHOICES, null=True, blank=True)
