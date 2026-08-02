@@ -57,13 +57,17 @@ SIMPLE_JWT = {
 # Application definition
 
 INSTALLED_APPS = [
+    "cloudinary_storage",
+    "django.contrib.staticfiles",
+    "cloudinary",
+
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django.contrib.staticfiles",
     "rest_framework",
+
     # Use AppConfig so inventory signals (auto-create rows per part/company) are loaded
     "inventory.apps.InventoryConfig",
     "accounts",
@@ -73,8 +77,6 @@ INSTALLED_APPS = [
     "customer_order",
     "production",
     "dispatch",
-    'cloudinary',
-    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -210,4 +212,14 @@ CLOUDINARY_STORAGE = {
     'API_KEY': os.getenv('CLOUDINARY_API_KEY') or os.getenv('API_KEY'),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET') or os.getenv('API_SECRET'),
 }
+
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
