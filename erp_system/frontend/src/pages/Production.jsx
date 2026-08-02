@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
+import { parsePaginatedResponse } from '../utils/pagination';
 import '../styles/Inventory.css';
 
 const QUEUE_DEFAULT_FIELD = { value: 'po_number', label: 'PO Number' };
@@ -139,6 +141,10 @@ function Production() {
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [approvedOrders, setApprovedOrders] = useState([]);
     const [reports, setReports] = useState([]);
+    const [queuePagination, setQueuePagination] = useState({ next: null, previous: null, count: 0 });
+    const [reportsPagination, setReportsPagination] = useState({ next: null, previous: null, count: 0 });
+    const [queuePage, setQueuePage] = useState(1);
+    const [reportsPage, setReportsPage] = useState(1);
 
     const [queueSearchField, setQueueSearchField] = useState(QUEUE_DEFAULT_FIELD);
     const [queueSearchTerm, setQueueSearchTerm] = useState(null);
@@ -148,35 +154,45 @@ function Production() {
     useEffect(() => {
         const initializeDashboard = async () => {
             try {
-                const [userRes, ordersRes, reportsRes] = await Promise.allSettled([
-                    api.get('/api/user/me/'),
-                    api.get('/api/customer-orders/'),
-                    api.get('/api/production-reports/?page_size=1000'),
-                ]);
-
-                if (userRes.status === 'fulfilled') setUserRole(userRes.value.data.role);
-
-                if (ordersRes.status === 'fulfilled') {
-                    const ordersData = ordersRes.value.data.results ?? ordersRes.value.data;
-                    const relevantOrders = (Array.isArray(ordersData) ? ordersData : []).filter(
-                        (order) => order.status === 'APPROVED' || order.status === 'IN_PRODUCTION'
-                    );
-                    setApprovedOrders(relevantOrders);
-                }
-
-                if (reportsRes.status === 'fulfilled') {
-                    const reportsData = reportsRes.value.data.results ?? reportsRes.value.data;
-                    setReports(Array.isArray(reportsData) ? reportsData : []);
-                }
+                const userRes = await api.get('/api/user/me/');
+                setUserRole(userRes.data.role);
             } catch (err) {
-                console.error('Critical failure loading Production Dashboard', err);
+                console.error('Failed to fetch user role', err);
             } finally {
                 setLoadingAuth(false);
             }
         };
 
         initializeDashboard();
+        fetchQueue();
+        fetchReports();
     }, []);
+
+    const fetchQueue = async (url) => {
+        try {
+            const requestUrl = url || `/api/customer-orders/?status__in=APPROVED,IN_PRODUCTION&page=${queuePage}`;
+            const res = await api.get(requestUrl);
+            const { results, pagination, page } = parsePaginatedResponse(res.data, requestUrl);
+            setApprovedOrders(results);
+            setQueuePagination(pagination);
+            setQueuePage(page);
+        } catch (err) {
+            console.error('Failed to fetch production queue', err);
+        }
+    };
+
+    const fetchReports = async (url) => {
+        try {
+            const requestUrl = url || `/api/production-reports/?page=${reportsPage}`;
+            const res = await api.get(requestUrl);
+            const { results, pagination, page } = parsePaginatedResponse(res.data, requestUrl);
+            setReports(results);
+            setReportsPagination(pagination);
+            setReportsPage(page);
+        } catch (err) {
+            console.error('Failed to fetch production reports', err);
+        }
+    };
 
     useEffect(() => {
         document.title = 'Production Dashboard - MMestry';
@@ -287,13 +303,6 @@ function Production() {
                                 <tbody>
                                     {filteredApprovedOrders.map((order) => {
                                         const isInProgress = order.status === 'IN_PRODUCTION';
-                                        const linkedReport = isInProgress
-                                            ? reports.find(
-                                                (r) =>
-                                                    r.customer_order === order.id ||
-                                                    (r.customer_order_details && r.customer_order_details.id === order.id)
-                                            )
-                                            : null;
 
                                         return (
                                             <tr key={order.id} style={{ background: isInProgress ? '#f0fdf4' : 'transparent' }}>
@@ -329,7 +338,7 @@ function Production() {
                                                             </button>
                                                         ) : (
                                                             <button
-                                                                onClick={() => (linkedReport ? navigate(`/production/report/${linkedReport.id}`) : alert('Report not found'))}
+                                                                onClick={() => (order.production_report_id ? navigate(`/production/report/${order.production_report_id}`) : alert('Report not found'))}
                                                                 style={{
                                                                     background: '#3b82f6', color: 'white', border: 'none',
                                                                     padding: '6px 16px', borderRadius: '6px', cursor: 'pointer',
@@ -346,6 +355,14 @@ function Production() {
                                     })}
                                 </tbody>
                             </table>
+                            <PaginationControls
+                                count={queuePagination.count}
+                                next={queuePagination.next}
+                                previous={queuePagination.previous}
+                                page={queuePage}
+                                onPrevious={() => fetchQueue(queuePagination.previous)}
+                                onNext={() => fetchQueue(queuePagination.next)}
+                            />
                         </div>
                     )}
                 </section>
@@ -395,11 +412,10 @@ function Production() {
                                 <tbody>
                                     {filteredReports.map((report) => {
                                         const poNum = getReportPoNumber(report) || 'Unknown';
-                                        const matchedOrder = approvedOrders.find(o => o.po_number === poNum);
-                                        const clientName = report.customer_order_details?.client_name || matchedOrder?.client_name || 'N/A';
-                                        const companyName = report.customer_order_details?.company_name || matchedOrder?.company_name || 'N/A';
-                                        const partName = report.customer_order_details?.part_name || matchedOrder?.part_name || 'N/A';
-                                        const partDescription = report.customer_order_details?.part_description || matchedOrder?.part_description || '';
+                                        const clientName = report.client_name || 'N/A';
+                                        const companyName = report.company_name || 'N/A';
+                                        const partName = report.part_name || 'N/A';
+                                        const partDescription = report.part_description || '';
 
                                         return (
                                             <tr key={report.id}>
@@ -452,6 +468,14 @@ function Production() {
                                 })}
                                 </tbody>
                             </table>
+                            <PaginationControls
+                                count={reportsPagination.count}
+                                next={reportsPagination.next}
+                                previous={reportsPagination.previous}
+                                page={reportsPage}
+                                onPrevious={() => fetchReports(reportsPagination.previous)}
+                                onNext={() => fetchReports(reportsPagination.next)}
+                            />
                         </div>
                     )}
                 </section>

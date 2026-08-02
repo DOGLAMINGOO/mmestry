@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import '../styles/Inventory.css';
 
 function CustomerOrders() {
@@ -10,6 +11,8 @@ function CustomerOrders() {
     const [orders, setOrders] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [ordersError, setOrdersError] = useState(null);
+    const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
 
     const [userRole, setUserRole] = useState(null);
 
@@ -17,12 +20,33 @@ function CustomerOrders() {
     const [searchField, setSearchField] = useState({ value: 'company_name', label: 'Company' });
     const [searchTerm, setSearchTerm] = useState(null);
 
-    const fetchOrders = async () => {
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
+        try {
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
+    const fetchOrders = async (url) => {
         setOrdersLoading(true);
         setOrdersError(null);
         try {
-            const res = await api.get('/api/customer-orders/');
-            setOrders(res.data);
+            const requestUrl = url || `/api/customer-orders/?page=${page}`;
+            const res = await api.get(requestUrl);
+            const data = res.data;
+            if (data && Array.isArray(data.results)) {
+                setOrders(data.results);
+                setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
+            } else {
+                setOrders(Array.isArray(data) ? data : []);
+                setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
+            }
         } catch (err) {
             console.error('Failed to fetch customer orders', err);
             setOrdersError('Failed to fetch customer orders');
@@ -212,7 +236,7 @@ function CustomerOrders() {
                     </div>
                 )}
                 {!ordersLoading && !ordersError && filteredOrders.length > 0 && (
-                    <div>
+                    <>
                         <table className="inventory-table">
                             <thead>
                                 <tr>
@@ -282,7 +306,15 @@ function CustomerOrders() {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
+                        <PaginationControls
+                            count={pagination.count}
+                            next={pagination.next}
+                            previous={pagination.previous}
+                            page={page}
+                            onPrevious={() => fetchOrders(pagination.previous)}
+                            onNext={() => fetchOrders(pagination.next)}
+                        />
+                    </>
                 )}
             </div>
         </div>

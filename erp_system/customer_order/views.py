@@ -41,11 +41,22 @@ class CustomerOrderListCreateView(generics.ListCreateAPIView):
     """
 
     def get_queryset(self):
-        return CustomerOrder.objects.filter(
+        queryset = CustomerOrder.objects.filter(
             is_deleted=False
         ).exclude(
             status=CustomerOrder.STATUS_DISPATCHED
-        ).select_related("company", "client", "part", "created_by")
+        ).select_related("company", "client", "part", "created_by").prefetch_related("production_report")
+
+        status = self.request.query_params.get("status")
+        status_in = self.request.query_params.get("status__in")
+        if status_in:
+            statuses = [value.strip() for value in status_in.split(",") if value.strip()]
+            if statuses:
+                queryset = queryset.filter(status__in=statuses)
+        elif status:
+            queryset = queryset.filter(status=status)
+
+        return queryset
 
     serializer_class = CustomerOrderSerializer
     permission_classes = [IsAuthenticated, IsAdminOrManagerForWrite]

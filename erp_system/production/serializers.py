@@ -57,12 +57,18 @@ class ProductionReportListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for list view with key fields including finished qty"""
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     po_number = serializers.CharField(source='customer_order.po_number', read_only=True)
+    company_name = serializers.CharField(source='customer_order.company.name', read_only=True)
+    client_name = serializers.CharField(source='customer_order.client.name', read_only=True)
+    part_name = serializers.CharField(source='customer_order.part.name', read_only=True)
+    part_description = serializers.CharField(source='customer_order.part.description', read_only=True, default='')
+    customer_order = serializers.IntegerField(source='customer_order.id', read_only=True)
     remaining_quantity = serializers.SerializerMethodField()
     
     class Meta:
         model = ProductionReport
         fields = [
-            'id', 'po_number', 'machine_name', 'operator_name', 
+            'id', 'customer_order', 'po_number', 'company_name', 'client_name',
+            'part_name', 'part_description', 'machine_name', 'operator_name',
             'start_time', 'status', 'required_quantity', 'produced_quantity',
             'remaining_quantity', 'job_rating', 'created_by_username'
         ]

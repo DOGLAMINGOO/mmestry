@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import '../styles/Inventory.css';
 
 const historyButtonStyle = {
@@ -17,6 +18,7 @@ function ProductionReportsHistory() {
     const navigate = useNavigate();
     const [history, setHistory] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [filters, setFilters] = useState({ po_number: '', status: '', machine_name: '' });
@@ -26,21 +28,35 @@ function ProductionReportsHistory() {
         fetchHistory();
     }, []);
 
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
+        try {
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
     const fetchHistory = async (url) => {
         setLoading(true);
         try {
-            const requestUrl = url || `/api/production-reports/history/?${new URLSearchParams(
+            const queryString = new URLSearchParams(
                 Object.fromEntries(Object.entries(filters).filter(([, v]) => v))
-            ).toString()}`;
+            ).toString();
+            const requestUrl = url || `/api/production-reports/history/?${queryString}${queryString ? '&' : ''}page=${page}`;
             const res = await api.get(requestUrl);
             const data = res.data;
 
             if (data && Array.isArray(data.results)) {
                 setHistory(data.results);
                 setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
             } else {
                 setHistory(Array.isArray(data) ? data : []);
                 setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
             }
         } catch (err) {
             alert('Failed to fetch production reports.');
@@ -122,13 +138,14 @@ function ProductionReportsHistory() {
             </div>
 
             {pagination.count > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-                    <span>Showing {history.length} of {pagination.count} records</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => fetchHistory(pagination.previous)} disabled={!pagination.previous || loading}>Previous</button>
-                        <button onClick={() => fetchHistory(pagination.next)} disabled={!pagination.next || loading}>Next</button>
-                    </div>
-                </div>
+                <PaginationControls
+                    count={pagination.count}
+                    next={pagination.next}
+                    previous={pagination.previous}
+                    page={pagination.next ? Number(new URL(pagination.next, window.location.origin).searchParams.get('page')) - 1 : (pagination.previous ? Number(new URL(pagination.previous, window.location.origin).searchParams.get('page')) + 1 : 1)}
+                    onPrevious={() => fetchHistory(pagination.previous)}
+                    onNext={() => fetchHistory(pagination.next)}
+                />
             )}
 
             {selectedRecord && (

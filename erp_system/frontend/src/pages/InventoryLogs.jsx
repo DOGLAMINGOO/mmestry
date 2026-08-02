@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import '../styles/Inventory.css';
 
 const historyButtonStyle = {
@@ -118,13 +119,14 @@ function InventoryLogs() {
             </div>
 
             {pagination.count > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-                    <span>Showing {logs.length} of {pagination.count} records</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => fetchLogs(pagination.previous)} disabled={!pagination.previous || loading}>Previous</button>
-                        <button onClick={() => fetchLogs(pagination.next)} disabled={!pagination.next || loading}>Next</button>
-                    </div>
-                </div>
+                <PaginationControls
+                    count={pagination.count}
+                    next={pagination.next}
+                    previous={pagination.previous}
+                    page={pagination.next ? new URL(pagination.next, window.location.origin).searchParams.get('page') - 1 : (pagination.previous ? Number(new URL(pagination.previous, window.location.origin).searchParams.get('page')) + 1 : 1)}
+                    onPrevious={() => fetchLogs(pagination.previous)}
+                    onNext={() => fetchLogs(pagination.next)}
+                />
             )}
 
             {selectedRecord && (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import '../styles/Inventory.css'
 
 function Inventory() {
@@ -11,6 +12,8 @@ function Inventory() {
     const [error, setError] = useState(null);
     const [companies, setCompanies] = useState([]);
     const [parts, setParts] = useState([]);
+    const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
 
     // Frontend state
     const [userRole, setUserRole] = useState(null);
@@ -20,7 +23,7 @@ function Inventory() {
     const [searchTerm, setSearchTerm] = useState(null);
 
     useEffect(() => {
-        getInventory();
+        fetchInventory();
         getCompanies();
         getParts();
     }, []);
@@ -47,13 +50,36 @@ function Inventory() {
         }
     };
 
-    const getInventory = async () => {
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
         try {
-            const response = await api.get('/api/inventory/');
-            setInventory(response.data);
-            setLoading(false);
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
+    const fetchInventory = async (url) => {
+        setLoading(true);
+        try {
+            const requestUrl = url || `/api/inventory/?page=${page}`;
+            const response = await api.get(requestUrl);
+            const data = response.data;
+
+            if (data && Array.isArray(data.results)) {
+                setInventory(data.results);
+                setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
+            } else {
+                setInventory(Array.isArray(data) ? data : []);
+                setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
+            }
         } catch (err) {
             setError('Failed to fetch inventory data');
+        } finally {
             setLoading(false);
         }
     };
@@ -89,7 +115,7 @@ function Inventory() {
 
         try {
             await api.post(`/api/inventory/${adjustItem.id}/adjust/`, { field, action, quantity: qty, reason });
-            await getInventory();
+            await fetchInventory();
             closeAdjust();
             alert('Adjustment successful');
         } catch (err) {
@@ -134,7 +160,7 @@ function Inventory() {
                 supplier_name,
                 invoice_number
             });
-            await getInventory();
+            await fetchInventory();
             closeReceive();
             alert('Stock received successfully');
         } catch (err) {
@@ -305,8 +331,9 @@ function Inventory() {
                     </div>
                 )}
                 {filteredInventory.length > 0 && (
-                    <table className="inventory-table">
-                        <thead>
+                    <>
+                        <table className="inventory-table">
+                            <thead>
                             <tr>
                                 <th>Company</th>
                                 <th>Part</th>
@@ -386,6 +413,15 @@ function Inventory() {
                             ))}
                         </tbody>
                     </table>
+                    <PaginationControls
+                        count={pagination.count}
+                        next={pagination.next}
+                        previous={pagination.previous}
+                        page={page}
+                        onPrevious={() => fetchInventory(pagination.previous)}
+                        onNext={() => fetchInventory(pagination.next)}
+                    />
+                    </>
                 )}
             </div>
 

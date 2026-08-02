@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css'; 
 
 function Dispatch() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
+    const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -46,13 +49,34 @@ function Dispatch() {
         document.title = 'Dispatch - MMestry';
     }, []);
 
-    const fetchEligibleOrders = async () => {
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
         try {
-            const res = await api.get('/api/dispatch/eligible-orders/');
-            setOrders(res.data);
-            setLoading(false);
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
+    const fetchEligibleOrders = async (url) => {
+        try {
+            const requestUrl = url || `/api/dispatch/eligible-orders/?page=${page}`;
+            const res = await api.get(requestUrl);
+            const data = res.data;
+            if (data && Array.isArray(data.results)) {
+                setOrders(data.results);
+                setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
+            } else {
+                setOrders(Array.isArray(data) ? data : []);
+                setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
+            }
         } catch (err) {
             setError('Failed to fetch orders.');
+        } finally {
             setLoading(false);
         }
     };
@@ -237,7 +261,8 @@ function Dispatch() {
                         <p style={{ margin: 0, color: '#6b7280' }}>Try adjusting your search filters to find what you're looking for.</p>
                     </div>
                 ) : (
-                    <table className="inventory-table">
+                    <>
+                        <table className="inventory-table">
                         <thead>
                             <tr>
                                 <th>PO Number</th>
@@ -319,6 +344,15 @@ function Dispatch() {
                             })}
                         </tbody>
                     </table>
+                    <PaginationControls
+                        count={pagination.count}
+                        next={pagination.next}
+                        previous={pagination.previous}
+                        page={page}
+                        onPrevious={() => fetchEligibleOrders(pagination.previous)}
+                        onNext={() => fetchEligibleOrders(pagination.next)}
+                    />
+                    </>
                 )}
             </div>
 

@@ -25,8 +25,9 @@ function InventoryDetail() {
                 setPart(foundPart);
 
                 // Fetch all inventory to determine which companies have this part
-                const allInv = await api.get('/api/inventory/');
-                const samePart = allInv.data.filter(i => i.part === invItem.part);
+                const allInv = await api.get('/api/inventory/?page_size=1000');
+                const allInvData = allInv.data.results ?? allInv.data;
+                const samePart = allInvData.filter(i => i.part === invItem.part);
 
                 // Fetch companies to get codes (A/B) and names
                 const companiesResp = await api.get('/api/companies/');

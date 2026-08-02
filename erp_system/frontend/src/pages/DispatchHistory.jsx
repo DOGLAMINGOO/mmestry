@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css';
 
@@ -15,6 +16,7 @@ const FIELD_OPTIONS = [
 function DispatchHistoryPage() {
     const [history, setHistory] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState({});
 
@@ -25,19 +27,32 @@ function DispatchHistoryPage() {
     useEffect(() => { fetchHistory(); }, []);
     useEffect(() => { document.title = 'Dispatch History - MMestry'; }, []);
 
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
+        try {
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
     const fetchHistory = async (url) => {
         setLoading(true);
         try {
-            const requestUrl = url || '/api/dispatch/history/?page_size=1000';
+            const requestUrl = url || `/api/dispatch/history/?page=${page}`;
             const res = await api.get(requestUrl);
             const data = res.data;
 
             if (data && Array.isArray(data.results)) {
                 setHistory(data.results);
                 setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
             } else {
                 setHistory(Array.isArray(data) ? data : []);
                 setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
             }
         } catch (err) {
             alert('Failed to fetch dispatch history.');
@@ -284,13 +299,14 @@ function DispatchHistoryPage() {
             </div>
 
             {pagination.count > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-                    <div style={{ color: '#475569' }}>Showing {history.length} of {pagination.count} records</div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => fetchHistory(pagination.previous)} disabled={!pagination.previous || loading} style={{ padding: '10px 16px', borderRadius: '6px', border: '1px solid #d1d5db', background: pagination.previous ? '#fff' : '#f8fafc', color: pagination.previous ? '#111827' : '#9ca3af', cursor: pagination.previous ? 'pointer' : 'not-allowed' }}>Previous</button>
-                        <button onClick={() => fetchHistory(pagination.next)} disabled={!pagination.next || loading} style={{ padding: '10px 16px', borderRadius: '6px', border: '1px solid #d1d5db', background: pagination.next ? '#2563eb' : '#f8fafc', color: pagination.next ? '#fff' : '#9ca3af', cursor: pagination.next ? 'pointer' : 'not-allowed' }}>Next</button>
-                    </div>
-                </div>
+                <PaginationControls
+                    count={pagination.count}
+                    next={pagination.next}
+                    previous={pagination.previous}
+                    page={page}
+                    onPrevious={() => fetchHistory(pagination.previous)}
+                    onNext={() => fetchHistory(pagination.next)}
+                />
             )}
         </div>
     );

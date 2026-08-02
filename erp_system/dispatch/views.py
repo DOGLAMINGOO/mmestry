@@ -1,19 +1,19 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django.db.models import Q
 from .models import DispatchHistory
 from .serializers import DispatchHistorySerializer, DashboardOrderSerializer
 from customer_order.models import CustomerOrder
 from inventory.models import Inventory, InventoryLog
+from api.pagination import StandardPagination
 
 class DispatchViewSet(viewsets.ModelViewSet):
     queryset = DispatchHistory.objects.all()
     serializer_class = DispatchHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = PageNumberPagination
+    pagination_class = StandardPagination
 
     @action(detail=False, methods=['get'], url_path='eligible-orders')
     def eligible_orders(self, request):
@@ -27,6 +27,12 @@ class DispatchViewSet(viewsets.ModelViewSet):
             is_deleted=False,
             is_short_closed=False
         ).select_related('company', 'client', 'part', 'production_report').prefetch_related('dispatch_history')
+
+        page = self.paginate_queryset(orders)
+        if page is not None:
+            serializer = DashboardOrderSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = DashboardOrderSerializer(orders, many=True)
         return Response(serializer.data)
 

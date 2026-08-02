@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css';
 
@@ -28,6 +29,7 @@ function StockReceiptLogs() {
     const navigate = useNavigate();
     const [receipts, setReceipts] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [searchField, setSearchField] = useState(DEFAULT_FIELD);
@@ -38,19 +40,32 @@ function StockReceiptLogs() {
         fetchReceipts();
     }, []);
 
+    const getPageFromUrl = (url) => {
+        if (!url) return 1;
+        try {
+            const base = import.meta.env.VITE_API_URL || window.location.origin;
+            const parsed = new URL(url, base);
+            return Number(parsed.searchParams.get('page') || '1');
+        } catch (err) {
+            return 1;
+        }
+    };
+
     const fetchReceipts = async (url) => {
         setLoading(true);
         try {
-            const requestUrl = url || '/api/inventory/stock-receipts/?page_size=1000';
+            const requestUrl = url || `/api/inventory/stock-receipts/?page=${page}`;
             const res = await api.get(requestUrl);
             const data = res.data;
 
             if (data && Array.isArray(data.results)) {
                 setReceipts(data.results);
                 setPagination({ next: data.next, previous: data.previous, count: data.count });
+                setPage(getPageFromUrl(requestUrl));
             } else {
                 setReceipts(Array.isArray(data) ? data : []);
                 setPagination({ next: null, previous: null, count: Array.isArray(data) ? data.length : 0 });
+                setPage(1);
             }
         } catch (err) {
             alert('Failed to fetch stock receipt logs.');
@@ -128,13 +143,14 @@ function StockReceiptLogs() {
             </div>
 
             {pagination.count > 0 && !searchTerm && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-                    <span>Showing {filteredReceipts.length} of {pagination.count} records</span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <button onClick={() => fetchReceipts(pagination.previous)} disabled={!pagination.previous || loading}>Previous</button>
-                        <button onClick={() => fetchReceipts(pagination.next)} disabled={!pagination.next || loading}>Next</button>
-                    </div>
-                </div>
+                <PaginationControls
+                    count={pagination.count}
+                    next={pagination.next}
+                    previous={pagination.previous}
+                    page={pagination.next ? Number(new URL(pagination.next, window.location.origin).searchParams.get('page')) - 1 : (pagination.previous ? Number(new URL(pagination.previous, window.location.origin).searchParams.get('page')) + 1 : 1)}
+                    onPrevious={() => fetchReceipts(pagination.previous)}
+                    onNext={() => fetchReceipts(pagination.next)}
+                />
             )}
 
             {searchTerm && (

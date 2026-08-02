@@ -40,6 +40,7 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source="created_by.username", read_only=True)
     last_edited_by_username = serializers.CharField(source="last_edited_by.username", read_only=True)
     remaining_quantity = serializers.SerializerMethodField()
+    production_report_id = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomerOrder
@@ -61,6 +62,7 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
             "deadline",
             "priority",
             "status",
+            "production_report_id",
             "is_short_closed",
             "last_edit_reason",
             "created_by",
@@ -84,6 +86,10 @@ class CustomerOrderSerializer(serializers.ModelSerializer):
     def get_remaining_quantity(self, obj):
         """Calculate remaining quantity to be shipped"""
         return obj.quantity - obj.shipped_quantity
+
+    def get_production_report_id(self, obj):
+        report = getattr(obj, "production_report", None)
+        return report.id if report else None
 
     def validate(self, data):
         if not data.get("po_number") or not str(data.get("po_number")).strip():
