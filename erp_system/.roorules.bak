@@ -1,0 +1,396 @@
+# .roorules — MMestry ERP System
+
+## Project Overview
+
+This is an **internal production & inventory management ERP system** for a **gear manufacturing business** (MMestry). It manages the full lifecycle of gear manufacturing: customer orders → production → inventory management → dispatch/shipping.
+
+**Two companies operate within the system:**
+- **Company A**: Converts raw rods → blanks → finished parts (has one extra stage)
+- **Company B**: Converts blanks → finished parts
+- Inventory is **SEPARATE per company**
+- Clients, Parts/Gears, Employees, and Machines are **SHARED** across companies
+
+**UI is tablet-first** (web app designed for tablet use on the factory floor).
+
+---
+
+## Tech Stack
+
+### Backend
+- **Framework**: Django 6.0.4 (Python)
+- **API**: Django REST Framework 3.17.1
+- **Authentication**: JWT via `djangorestframework-simplejwt` 5.5.1 (30-min access token, 1-day refresh token)
+- **Database**: PostgreSQL (via `psycopg2-binary`, configured with `dj-database-url`)
+- **Hosting DB**: Neon.tech (PostgreSQL with SSL)
+- **File Storage**: Cloudinary (`django-cloudinary-storage` for media/uploads — QC reports, invoices)
+- **Static Files**: WhiteNoise
+- **CORS**: `django-cors-headers`
+- **Server**: Gunicorn (production), Django dev server (development)
+- **Environment**: `python-dotenv` for `.env` file loading
+- **Timezone**: `Asia/Kolkata` (IST)
+
+### Frontend
+- **Framework**: React 19.2.3 (JSX, functional components only)
+- **Build Tool**: Vite 7.2.4 (`@vitejs/plugin-react`)
+- **Routing**: React Router DOM 7.12.0
+- **HTTP Client**: Axios 1.13.2 (centralized instance with JWT interceptor in `src/api.js`)
+- **UI Library**: react-select for dropdowns
+- **Token Handling**: jwt-decode for token expiration checks
+- **Styling**: Vanilla CSS + inline styles (NO Tailwind, NO CSS framework)
+- **State Management**: React `useState`/`useEffect` hooks (no Redux, no Context)
+
+### Deployment
+- **Backend**: Render (via `build.sh` — pip install, collectstatic, migrate)
+- **Frontend**: Separate deployment (Vite build → `dist/`)
+- **Environment Variables**: `SECRET_KEY`, `DEBUG`, `DATABASE_URL`, `FRONTEND_URL`, `CORS_ALLOWED_ORIGINS`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+
+---
+
+## Project Structure
+
+```
+erp_system/
+├── backend/              # Django project settings (settings.py, urls.py, wsgi.py, asgi.py)
+├── api/                  # Central API app (user registration, current user view, pagination, URL routing hub)
+├── accounts/             # Custom user model (CustomUser extends AbstractUser)
+├── core/                 # Shared master data (Company, Client, Part, Machine, Operator)
+├── inventory/            # Inventory management (Inventory, InventoryLog, StockReceipt)
+├── customer_order/       # Customer/Purchase orders (CustomerOrder, CustomerOrderLog)
+├── production/           # Production tracking (ProductionReport, ProductionOrder proxy)
+├── dispatch/             # Dispatch/shipping (DispatchHistory, DispatchOrder proxy)
+├── frontend/             # React + Vite SPA
+│   └── src/
+│       ├── api.js        # Axios instance with JWT interceptor + token refresh
+│       ├── constants.js  # Token storage keys
+│       ├── App.jsx       # React Router routes
+│       ├── main.jsx      # React entry point
+│       ├── components/   # Reusable components (ProtectedRoute, TopNav, NotificationBell, Form, PaginationControls, SearchFilterBar)
+│       ├── hooks/        # Custom hooks (useFormDraft for localStorage draft saving)
+│       ├── pages/        # Page components (18 pages)
+│       ├── styles/       # CSS files
+│       └── utils/        # Utility functions (pagination)
+├── media/                # Uploaded files (local dev)
+├── static/               # Collected static files
+├── templates/            # Django templates (not actively used — SPA)
+├── manage.py             # Django management
+├── requirements.txt      # Python dependencies
+├── build.sh              # Production build script (Render)
+└── .env                  # Environment variables (SECRET_KEY, DATABASE_URL, etc.)
+```
+
+---
+
+## Django Apps & Models
+
+### `accounts` — User Management
+- **`CustomUser`** (extends `AbstractUser`):
+  - `role`: CharField with choices: `ADMIN`, `MANAGER`, `STOCK_MANAGER` (default: `MANAGER`)
+  - `AUTH_USER_MODEL = "accounts.CustomUser"` in settings
+
+### `core` — Shared Master Data
+- **`Company`**: `code` (A/B, unique), `name`
+- **`Client`**: `name` (unique)
+- **`Part`**: `part_number` (unique), `name`, `description`, `cycle_time_minutes`
+- **`Machine`**: `name` (unique), `is_active`
+- **`Operator`**: `name` (unique), `is_active`
+
+### `inventory` — Stock Management
+- **`Inventory`**: Per-company, per-part stock tracking
+  - `company` → FK to Company, `part` → FK to Part
+  - `total_blanks`, `finished_blanks` (PositiveIntegerField, default 0)
+  - `unique_together = ("company", "part")`
+  - **Computed properties**: `reserved_blanks` (from active orders), `available_blanks` (total - reserved)
+  - **Methods**: `increase_blanks()`, `decrease_blanks()`, `increase_finished()`, `decrease_finished()` — all wrapped in `transaction.atomic()` and create `InventoryLog` entries
+- **`InventoryLog`**: Audit trail for every stock movement
+  - Change types: `PO_RECEIVED`, `PRODUCTION_USED`, `PRODUCTION_CREATED`, `DISPATCHED`, `SALES_OUT`, `ADJUSTMENT`
+  - Positive quantity = increase, negative = decrease
+- **`StockReceipt`**: Incoming stock shipments (PO received)
+  - `supplier_name`, `invoice_number`, auto-creates InventoryLog
+- **Signal**: `post_save` on `Part` → auto-creates `Inventory` row for every `Company`
+
+### `customer_order` — Customer Orders (Purchase Orders)
+- **`CustomerOrder`**:
+  - `po_number` (manually entered), `po_date`, `company`, `client`, `part`
+  - `quantity`, `shipped_quantity` (tracks cumulative dispatches), `deadline`, `priority` (LOW/MEDIUM/HIGH)
+  - **Status workflow**: `DRAFT` → `APPROVED` → `IN_PRODUCTION` → `READY_FOR_DISPATCH` → `PARTIALLY_SHIPPED` → `DISPATCHED` → `CLOSED`
+  - `is_deleted` (soft delete), `is_short_closed` (no further shipments)
+  - `qc_report` (FileField → Cloudinary), `last_edit_reason` (mandatory on edits)
+  - `created_by`, `last_edited_by` (FK to CustomUser)
+- **`CustomerOrderLog`**: Audit trail for order changes
+  - Actions: `CREATED`, `EDITED`, `STATUS_CHANGED`, `SOFT_DELETED`
+  - Snapshots all order fields at time of action
+- **Business Rules**: Dispatched orders CANNOT be edited or deleted. Edits REQUIRE `last_edit_reason`.
+
+### `production` — Manufacturing Tracking
+- **`ProductionReport`** (OneToOne with CustomerOrder):
+  - `machine_name`, `operator_name`, `deadline`, `required_quantity`
+  - `produced_quantity`, `scrap_quantity` (PositiveIntegerField)
+  - Time tracking: `start_time`, `end_time`, `operator_working_hours`, `parts_made_in_working_hours`, `operator_overtime_hours`, `parts_made_in_overtime`, `idle_time_hours`, `idle_reason`
+  - Quality: `job_rating` (EXCELLENT/VERY_GOOD/GOOD/POOR), `remarks`
+  - `entry_logs` (JSONField) — incremental production entry history
+  - Status: `IN_PROGRESS`, `COMPLETED`
+  - **CRITICAL**: Production updates use ACCUMULATION pattern — incoming values are ADDED to existing totals, not replaced
+  - Auto-status: produced_qty >= required_qty → `COMPLETED`; completion triggers CustomerOrder → `READY_FOR_DISPATCH`
+- **`ProductionOrder`** (proxy model of CustomerOrder) — for admin display
+- **Inventory sync**: On completion: deducts (produced + scrap) from `total_blanks`, adds produced to `finished_blanks`
+
+### `dispatch` — Shipping Management
+- **`DispatchHistory`**:
+  - `order` → FK to CustomerOrder, snapshots (`po_number`, `client_name`, `company_name`, `part_name`)
+  - `shipped_quantity`, `actual_shipped_quantity`, `ordered_quantity`
+  - File uploads: `main_invoice_pdf`, `main_qc_report_pdf`, `qc_report`, `supplementary_invoice_pdf`, `supplementary_qc_report_pdf`
+  - `is_short_closed`, `has_supplementary`, `supplementary_shipped_quantity`
+  - `parent_dispatch` → self-referencing FK for supplementary dispatches
+  - On dispatch: decreases `finished_blanks` in inventory, updates order `shipped_quantity` and status
+- **`DispatchOrder`** (proxy model of CustomerOrder) — for admin display
+
+---
+
+## API Endpoints
+
+All API endpoints are prefixed with `/api/`.
+
+### Authentication
+- `POST /api/login/` — JWT token obtain (username + password → access + refresh)
+- `POST /api/token/refresh/` — Refresh access token
+- `POST /api/user/register/` — Create new user (AllowAny)
+- `GET /api/user/me/` — Current user info (id, username, is_superuser, role)
+
+### Core (Master Data)
+- `GET /api/companies/` — List all companies
+- `GET /api/parts/` — List all parts
+- `GET /api/clients/` — List all clients
+- `GET /api/machines/` — List active machines
+- `GET /api/operators/` — List active operators
+
+### Inventory
+- `GET /api/inventory/` — List all inventory (annotated with last_adjusted_at/by, reserved_blanks)
+- `GET /api/inventory/<id>/` — Inventory detail
+- `DELETE /api/inventory/delete/<id>/` — Hard delete inventory (ADMIN/STOCK_MANAGER only)
+- `POST /api/inventory/<id>/adjust/` — Manual stock adjustment (ADMIN/STOCK_MANAGER only; requires `action`, `field`, `quantity`, `reason`)
+- `GET /api/inventory/logs/` — Inventory log history (filterable by change_type, company, part)
+- `GET/POST /api/inventory/stock-receipts/` — Stock receipt list/create (POST auto-increases inventory blanks)
+
+### Customer Orders
+- `GET/POST /api/customer-orders/` — List (excludes DISPATCHED) / Create (supports single, array, or `{items: [...]}` bulk format)
+- `GET/PUT/PATCH/DELETE /api/customer-orders/<id>/` — Detail/Update/Soft-delete (ADMIN/MANAGER only for writes)
+- `GET /api/customer-orders/logs/` — Order audit logs (filterable by po_number, action_type, company)
+
+### Production
+- `GET/POST /api/production-reports/` — List/Create production reports (ADMIN/STOCK_MANAGER only for writes)
+- `GET/PUT/PATCH /api/production-reports/<id>/` — Detail/Update (ADMIN/STOCK_MANAGER only for writes)
+- `GET /api/production-reports/history/` — Full production history (includes completed/dispatched, filterable)
+
+### Dispatch
+- `GET /api/dispatch/eligible-orders/` — Orders eligible for dispatch (IN_PRODUCTION/READY_FOR_DISPATCH/PARTIALLY_SHIPPED, not short-closed)
+- `POST /api/dispatch/` — Create dispatch (validates quantities, updates inventory, updates order status)
+- `POST /api/dispatch/<id>/upload-qc/` — Upload QC report to order
+- `POST /api/dispatch/<id>/upload-invoice/` — Upload invoice to dispatch record
+- `GET /api/dispatch/history/` — Dispatch history (filterable by client, company, date range)
+
+---
+
+## Role-Based Access Control (RBAC)
+
+| Role | Customer Orders | Inventory Adjust | Production Reports | Dispatch | Admin Panel |
+|------|----------------|-------------------|-------------------|----------|-------------|
+| **ADMIN** | Full CRUD | ✅ | Full CRUD | ✅ | ✅ |
+| **MANAGER** | Full CRUD | ❌ (read-only) | ❌ (read-only) | ✅ | ❌ |
+| **STOCK_MANAGER** | Read-only | ✅ | Full CRUD | ✅ | ❌ |
+
+### Permission Classes
+- `IsAdminOrManagerForWrite` (customer_order/permissions.py): Safe methods allowed for all authenticated; writes restricted to ADMIN/MANAGER
+- `CanAdjustInventory` (inventory/permissions.py): Only ADMIN/STOCK_MANAGER
+- `IsAdminOrStockManagerForWrite` (production/views.py): Only ADMIN/STOCK_MANAGER can write production reports
+
+---
+
+## Frontend Architecture
+
+### Routing (React Router v7)
+| Path | Component | Description |
+|------|-----------|-------------|
+| `/login` | `Login` | JWT login form |
+| `/logout` | `Logout` | Clears localStorage, redirects to login |
+| `/` | `Home` | Dashboard/home page |
+| `/inventory` | `Inventory` | Inventory list with adjustments |
+| `/inventory/:id` | `InventoryDetail` | Single inventory record detail |
+| `/customer-orders` | `CustomerOrders` | Orders list |
+| `/customer-orders/new` | `CreateCustomerOrder` | New order form (supports multi-item) |
+| `/customer-orders/edit/:id` | `EditCustomerOrder` | Edit existing order |
+| `/production` | `Production` | Production reports list |
+| `/production/start/:id` | `CreateProductionEntry` | Start new production report |
+| `/production/report/:id` | `EditProductionEntry` | Update production entry (accumulation) |
+| `/dispatch` | `Dispatch` | Dispatch dashboard |
+| `/dispatch-history` | `DispatchHistory` | Past dispatch records |
+| `/production-reports` | `ProductionReportsHistory` | Production report history |
+| `/inventory-logs` | `InventoryLogs` | Inventory change audit trail |
+| `/stock-receipt-logs` | `StockReceiptLogs` | Stock receipt history |
+| `/customer-order-logs` | `CustomerOrderLogs` | Order audit trail |
+
+### Key Frontend Patterns
+1. **Auth**: JWT stored in `localStorage` as `access` and `refresh`. Axios interceptor auto-attaches Bearer token. Failed requests trigger transparent token refresh with subscriber queue.
+2. **ProtectedRoute**: Wraps all authenticated routes; checks token expiry, refreshes if needed, renders `TopNav` + children.
+3. **API Module** (`src/api.js`): Centralized Axios instance with `baseURL = import.meta.env.VITE_API_URL`. All API calls use this.
+4. **Draft Saving**: `useFormDraft` hook saves form state to localStorage with 300ms debounce. Used in order creation forms.
+5. **Pagination**: Server-side via DRF `PageNumberPagination` (default 25 per page). Frontend uses `PaginationControls` component.
+6. **Styling**: Mix of inline styles and CSS files. NO CSS framework. Tablet-optimized layouts.
+7. **No global state management**: Each page fetches its own data. No Redux/Context/Zustand.
+
+---
+
+## Critical Business Rules
+
+1. **Order Lifecycle**: DRAFT → APPROVED → IN_PRODUCTION → READY_FOR_DISPATCH → PARTIALLY_SHIPPED/DISPATCHED → CLOSED
+2. **Production creates the link**: When a ProductionReport is created for an order, the order status moves to `IN_PRODUCTION`
+3. **Production completion triggers inventory sync**: Blanks consumed = produced + scrap. Finished goods increased by produced quantity.
+4. **Dispatch requires production completion**: Cannot dispatch unless production_report.status == COMPLETED
+5. **Dispatch decreases finished goods**: Inventory `finished_blanks` is reduced by shipped quantity
+6. **Short-close**: An order can be short-closed (no further shipments accepted) even if not fully shipped
+7. **Soft deletion**: Customer orders use `is_deleted` flag (not hard delete). All queries filter `is_deleted=False`
+8. **Edit reason mandatory**: Every customer order edit requires `last_edit_reason`
+9. **Idle reason mandatory**: If `idle_time_hours > 0`, `idle_reason` must be provided
+10. **Job rating remarks mandatory**: If `job_rating` is not `EXCELLENT`, `remarks` are required
+11. **Production uses accumulation pattern**: Updates ADD to existing totals (produced_quantity, working_hours, etc.), not replace them
+12. **Entry logs (JSONField)**: Each production update appends a delta+totals entry to `entry_logs`
+13. **Inventory auto-creation**: New Part → Signal creates Inventory rows for ALL companies
+14. **Reserved blanks**: Calculated dynamically from orders in APPROVED/IN_PRODUCTION status
+
+---
+
+## Database Relationships (Key FKs)
+
+```
+CustomUser (AUTH_USER_MODEL)
+    ↑ created_by/last_edited_by (many models)
+
+Company ←→ Inventory ←→ Part
+              ↓
+         InventoryLog
+
+Company → CustomerOrder ← Client
+              ↓                ↑ Part
+         CustomerOrderLog
+
+CustomerOrder ←1:1→ ProductionReport
+
+CustomerOrder ←1:N→ DispatchHistory
+DispatchHistory ←self→ DispatchHistory (parent_dispatch → supplementary)
+```
+
+---
+
+## Pagination
+
+- **Default**: `api.pagination.StandardPagination` — 25 items, `page_size` query param, max 1000
+- **Production**: `ProductionReportPagination` — same config
+- **Inventory Logs**: `HistoryPagination` — same config
+- **Customer Order Logs**: `CustomerOrderLogPagination` — 25 fixed
+
+---
+
+## File Uploads
+
+All file uploads go to **Cloudinary** (configured via `STORAGES` in settings):
+- `qc_reports/` — QC report PDFs (on CustomerOrder and DispatchHistory)
+- `dispatch_invoices/` — Invoice PDFs (on DispatchHistory)
+- Media URL: `/media/`, local media root: `erp_system/media/`
+
+---
+
+## Environment & Configuration
+
+### Backend `.env`
+```
+SECRET_KEY=<django-secret>
+DEBUG=True/False
+DATABASE_URL=postgres://...@neon.tech/...
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+FRONTEND_URL=https://your-frontend-domain.com
+CORS_ALLOWED_ORIGINS=https://origin1.com,https://origin2.com
+```
+
+### Frontend `.env`
+```
+VITE_API_URL=http://127.0.0.1:8000/
+```
+
+---
+
+## Development Commands
+
+### Backend
+```bash
+cd erp_system
+python -m venv .venv
+.venv\Scripts\activate   # Windows
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+### Frontend
+```bash
+cd erp_system/frontend
+npm install
+npm run dev              # Vite dev server on localhost:5173
+npm run build            # Production build → dist/
+```
+
+---
+
+## Coding Conventions & Patterns
+
+### Backend
+- **Views**: Use DRF class-based views (`generics.ListCreateAPIView`, `generics.RetrieveUpdateDestroyAPIView`, `viewsets.ModelViewSet`)
+- **Serializers**: ModelSerializer with explicit `fields` tuple. Use `source="related.field"` for nested reads. Computed fields via `SerializerMethodField`.
+- **Permissions**: Custom `BasePermission` subclasses checking `request.user.role`
+- **Querysets**: Use `select_related()` and `prefetch_related()` for performance. Annotate with `Subquery` for computed fields.
+- **Transactions**: Use `transaction.atomic()` for inventory operations
+- **Soft deletes**: `is_deleted` flag with queryset filtering, NOT Django model manager override
+- **Signals**: Used for auto-creating inventory rows on Part creation
+- **Proxy models**: Used for admin display variants (ProductionOrder, DispatchOrder)
+- **No ViewSets for simple CRUD**: Core/Inventory use generic views; Production/Dispatch use ViewSets with custom actions
+
+### Frontend
+- **Functional components only** (no class components)
+- **No TypeScript** — plain JavaScript/JSX
+- **Inline styles** heavily used (no CSS modules, no styled-components)
+- **No global state** — each component manages its own data fetching
+- **Error handling**: Try/catch with `error.response?.data` extraction
+- **Form drafts**: `useFormDraft` hook for auto-saving to localStorage
+- **Date handling**: Native JavaScript Date
+- **No testing framework** currently in frontend
+
+---
+
+## Important Gotchas
+
+1. **Production quantity accumulation**: The serializer ADDS incoming values to existing totals. If you send `produced_quantity: 10` and current is `5`, the result is `15`. This is intentional — each update is a delta.
+2. **Inventory reserved_blanks**: Computed at query time via Subquery annotations, NOT stored in DB. The model `@property` also computes it but the API uses the annotated version.
+3. **CORS**: Frontend runs on `localhost:5173/5174` in dev. Production CORS origins come from `FRONTEND_URL` and `CORS_ALLOWED_ORIGINS` env vars.
+4. **JWT on 401/403**: The Axios interceptor tries to refresh the token on ANY 401/403, not just token-expired errors. Queue pattern prevents multiple simultaneous refreshes.
+5. **Cloudinary for ALL media**: `DEFAULT_FILE_STORAGE` is Cloudinary. Uploaded files get Cloudinary URLs, not local paths.
+6. **No migration files in version control caution**: Check migrations carefully. There's a `migration_error.txt` indicating past migration issues.
+7. **SSL for Neon.tech**: Database connection forces `sslmode=require` when `neon.tech` is in the DATABASE_URL or DEBUG is False.
+8. **Dispatch supports supplementary shipments**: A single dispatch can have a main shipment + supplementary shipment (separate QC + invoice). Supplementary creates a child DispatchHistory linked via `parent_dispatch`.
+
+---
+
+## AI Instructions / Constraints
+- Never create hard-delete endpoints for Customer Orders; always use `is_deleted = True`.
+- When updating production entries, remember to update `entry_logs` (JSONField) with the delta entry.
+- Do not create Redux slices or React Context files; use component-level state and custom hooks only.
+
+---
+## Test Users
+
+| Username | Password | Role |
+|----------|----------|------|
+| admin | admin01 | ADMIN |
+| Manager1 | mmestryman01 | MANAGER |
+| Manager2 | mmestryman02 | MANAGER |
+| Stock-Manager | mmestrysm01 | STOCK_MANAGER |

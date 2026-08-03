@@ -2,6 +2,12 @@ from datetime import date
 
 from django.db import models
 from django.conf import settings
+from core.storage import DocumentStorage
+
+
+# QC reports are PDFs, not image assets. Cloudinary's default media storage
+# uses the image resource type, which can reject document uploads.
+document_storage = DocumentStorage()
 
 from core.models import Company, Client, Part
 
@@ -59,7 +65,12 @@ class CustomerOrder(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     last_edit_reason = models.TextField(blank=True, null=True, help_text="Reason for the last edit.")
-    qc_report = models.FileField(upload_to="qc_reports/", null=True, blank=True)
+    qc_report = models.FileField(
+        upload_to="qc_reports/",
+        storage=document_storage,
+        null=True,
+        blank=True,
+    )
     is_deleted = models.BooleanField(default=False, help_text="Soft deletion flag.")
     is_short_closed = models.BooleanField(default=False, help_text="Marked as short-closed: no further shipments will be accepted.")
 

@@ -123,7 +123,7 @@ function DispatchHistoryPage() {
             formData.append('invoice_pdf', file);
             formData.append('document_type', documentType);
             try {
-                await api.post(`/api/dispatch/${dispatchId}/upload-invoice/`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+                await api.post(`/api/dispatch/${dispatchId}/upload-invoice/`, formData);
                 alert('Invoice uploaded successfully.');
                 fetchHistory();
             } catch (err) {

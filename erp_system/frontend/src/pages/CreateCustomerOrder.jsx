@@ -7,7 +7,7 @@ import { loadDraft, useSaveDraft, clearDraft } from '../hooks/useFormDraft';
 
 const defaultPart = {
     part: '',
-    quantity: '',
+    quantity: 0,
     deadline: '',
     priority: 'MEDIUM',
     status: 'DRAFT',
@@ -48,6 +48,12 @@ function CreateCustomerOrder() {
     const [userRole, setUserRole] = useState(null);
     const [loadingRole, setLoadingRole] = useState(true);
 
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
+
     useEffect(() => {
         const fetchOptions = async () => {
             try {
@@ -57,9 +63,9 @@ function CreateCustomerOrder() {
                     api.get('/api/parts/'),
                     api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
-                setCompanies(companiesRes.data);
-                setClients(clientsRes.data);
-                setParts(partsRes.data);
+                setCompanies(normalizeListData(companiesRes.data));
+                setClients(normalizeListData(clientsRes.data));
+                setParts(normalizeListData(partsRes.data));
                 setUserRole(userRes.data.role);
             } catch (err) {
                 console.error('Failed to load select options or user role', err);
@@ -82,7 +88,8 @@ function CreateCustomerOrder() {
     };
 
     const handleCurrentPartChange = (field, value) => {
-        setCurrentPart((prev) => ({ ...prev, [field]: value }));
+        const nextValue = field === 'quantity' ? value.replace(/^0+(?=\d)/, '') : value;
+        setCurrentPart((prev) => ({ ...prev, [field]: nextValue }));
     };
 
     const validatePart = (part) => {

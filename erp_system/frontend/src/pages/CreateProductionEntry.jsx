@@ -13,6 +13,12 @@ function CreateProductionEntry() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
+
     const [form, setForm] = useState({
         machine_name: '',
         operator_name: '',
@@ -30,8 +36,8 @@ function CreateProductionEntry() {
                 setOrder(orderRes.data);
                 
                 // Map to react-select options format { value, label }
-                setMachines(machRes.data.map(m => ({ value: m.name, label: m.name })));
-                setOperators(opRes.data.map(o => ({ value: o.name, label: o.name })));
+                setMachines(normalizeListData(machRes.data).map(m => ({ value: m.name, label: m.name })));
+                setOperators(normalizeListData(opRes.data).map(o => ({ value: o.name, label: o.name })));
 
             } catch (err) {
                 console.error("Failed to load setup data", err);

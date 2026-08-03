@@ -1,6 +1,11 @@
 from django.db import models
 from django.conf import settings
+from core.storage import DocumentStorage
 from customer_order.models import CustomerOrder
+
+
+# Invoices and QC reports are PDFs, so store them as Cloudinary raw files.
+document_storage = DocumentStorage()
 
 class DispatchHistory(models.Model):
     """
@@ -30,14 +35,14 @@ class DispatchHistory(models.Model):
     ordered_quantity = models.PositiveIntegerField(default=0)
     actual_shipped_quantity = models.PositiveIntegerField(default=0)
     shipped_quantity = models.PositiveIntegerField()
-    main_invoice_pdf = models.FileField(upload_to="dispatch_invoices/", null=True, blank=True)
-    main_qc_report_pdf = models.FileField(upload_to="qc_reports/", null=True, blank=True)
-    qc_report = models.FileField(upload_to="qc_reports/", null=True, blank=True)
+    main_invoice_pdf = models.FileField(upload_to="dispatch_invoices/", storage=document_storage, null=True, blank=True)
+    main_qc_report_pdf = models.FileField(upload_to="qc_reports/", storage=document_storage, null=True, blank=True)
+    qc_report = models.FileField(upload_to="qc_reports/", storage=document_storage, null=True, blank=True)
     is_short_closed = models.BooleanField(default=False)
     has_supplementary = models.BooleanField(default=False)
     supplementary_shipped_quantity = models.PositiveIntegerField(default=0)
-    supplementary_invoice_pdf = models.FileField(upload_to="dispatch_invoices/", null=True, blank=True)
-    supplementary_qc_report_pdf = models.FileField(upload_to="qc_reports/", null=True, blank=True)
+    supplementary_invoice_pdf = models.FileField(upload_to="dispatch_invoices/", storage=document_storage, null=True, blank=True)
+    supplementary_qc_report_pdf = models.FileField(upload_to="qc_reports/", storage=document_storage, null=True, blank=True)
     
     dispatched_at = models.DateTimeField(auto_now_add=True)
     dispatched_by = models.ForeignKey(

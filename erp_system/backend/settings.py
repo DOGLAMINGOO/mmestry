@@ -214,6 +214,7 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME') or os.getenv('CLOUD_NAME'),
     'API_KEY': os.getenv('CLOUDINARY_API_KEY') or os.getenv('API_KEY'),
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET') or os.getenv('API_SECRET'),
+    'STATIC_IMAGES_EXTENSIONS': ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
 }
 
 STORAGES = {

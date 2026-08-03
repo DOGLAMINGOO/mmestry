@@ -18,6 +18,12 @@ function Inventory() {
     // Frontend state
     const [userRole, setUserRole] = useState(null);
 
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
+
     // Search and Filter State
     const [searchField, setSearchField] = useState({ value: 'part_name', label: 'Part' });
     const [searchTerm, setSearchTerm] = useState(null);
@@ -35,7 +41,7 @@ function Inventory() {
     const getCompanies = async () => {
         try {
             const response = await api.get('/api/companies/');
-            setCompanies(response.data);
+            setCompanies(normalizeListData(response.data));
         } catch (err) {
             console.error('Failed to fetch companies:', err);
         }
@@ -44,7 +50,7 @@ function Inventory() {
     const getParts = async () => {
         try {
             const response = await api.get('/api/parts/');
-            setParts(response.data);
+            setParts(normalizeListData(response.data));
         } catch (err) {
             console.error('Failed to fetch parts:', err);
         }
@@ -87,11 +93,11 @@ function Inventory() {
     // Adjust modal state
     const [adjustModalOpen, setAdjustModalOpen] = useState(false);
     const [adjustItem, setAdjustItem] = useState(null);
-    const [adjustForm, setAdjustForm] = useState({ field: 'finished', action: 'increase', quantity: 1, reason: '' });
+    const [adjustForm, setAdjustForm] = useState({ field: 'finished', action: 'increase', quantity: 0, reason: '' });
 
     const openAdjust = (item) => {
         setAdjustItem(item);
-        setAdjustForm({ field: 'finished', action: 'increase', quantity: 1, reason: '' });
+        setAdjustForm({ field: 'finished', action: 'increase', quantity: 0, reason: '' });
         setAdjustModalOpen(true);
     };
 
@@ -102,7 +108,8 @@ function Inventory() {
 
     const handleAdjustChange = (e) => {
         const { name, value } = e.target;
-        setAdjustForm(prev => ({ ...prev, [name]: value }));
+        const nextValue = name === 'quantity' ? value.replace(/^0+(?=\d)/, '') : value;
+        setAdjustForm(prev => ({ ...prev, [name]: nextValue }));
     };
 
     const submitAdjust = async () => {
@@ -127,10 +134,10 @@ function Inventory() {
 
     // Receive Stock modal state
     const [receiveModalOpen, setReceiveModalOpen] = useState(false);
-    const [receiveForm, setReceiveForm] = useState({ company: '', part: '', quantity: 1, supplier_name: '', invoice_number: '' });
+    const [receiveForm, setReceiveForm] = useState({ company: '', part: '', quantity: 0, supplier_name: '', invoice_number: '' });
 
     const openReceive = () => {
-        setReceiveForm({ company: '', part: '', quantity: 1, supplier_name: '', invoice_number: '' });
+        setReceiveForm({ company: '', part: '', quantity: 0, supplier_name: '', invoice_number: '' });
         setReceiveModalOpen(true);
     };
 
@@ -140,7 +147,8 @@ function Inventory() {
 
     const handleReceiveChange = (e) => {
         const { name, value } = e.target;
-        setReceiveForm(prev => ({ ...prev, [name]: value }));
+        const nextValue = name === 'quantity' ? value.replace(/^0+(?=\d)/, '') : value;
+        setReceiveForm(prev => ({ ...prev, [name]: nextValue }));
     };
 
     const submitReceive = async () => {

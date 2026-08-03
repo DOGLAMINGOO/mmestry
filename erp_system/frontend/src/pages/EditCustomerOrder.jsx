@@ -18,12 +18,18 @@ function EditCustomerOrder() {
     const [submitting, setSubmitting] = useState(false);
     const [userRole, setUserRole] = useState(null);
 
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
+
     const [form, setForm] = useState(() =>
         loadDraft(draftKey, {
             company: '',
             client: '',
             part: '',
-            quantity: '',
+            quantity: 0,
             deadline: '',
             priority: 'MEDIUM',
             status: 'DRAFT',
@@ -46,9 +52,9 @@ function EditCustomerOrder() {
                     api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
 
-                setCompanies(companiesRes.data);
-                setClients(clientsRes.data);
-                setParts(partsRes.data);
+                setCompanies(normalizeListData(companiesRes.data));
+                setClients(normalizeListData(clientsRes.data));
+                setParts(normalizeListData(partsRes.data));
                 setUserRole(userRes.data.role);
 
                 // Fetch existing order data
@@ -61,7 +67,7 @@ function EditCustomerOrder() {
                         company: order.company || '',
                         client: order.client || '',
                         part: order.part || '',
-                        quantity: order.quantity || '',
+                        quantity: order.quantity ?? 0,
                         deadline: order.deadline || '',
                         priority: order.priority || 'MEDIUM',
                         status: order.status || 'DRAFT',
@@ -88,7 +94,8 @@ function EditCustomerOrder() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
+        const nextValue = name === 'quantity' ? value.replace(/^0+(?=\d)/, '') : value;
+        setForm((prev) => ({ ...prev, [name]: nextValue }));
     };
 
     const handleSubmit = async (e) => {

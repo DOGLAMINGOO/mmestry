@@ -28,6 +28,12 @@ function Dispatch() {
             window.open(url, '_blank', 'noopener,noreferrer');
         }
     };
+
+    const getFilenameFromUrl = (path) => {
+        if (!path) return 'QC Report';
+        const parts = path.split('/');
+        return decodeURIComponent(parts[parts.length - 1]) || 'QC Report';
+    };
     const [dispatchingOrder, setDispatchingOrder] = useState(null); // Order object for modal
     const [shipQty, setShipQty] = useState(0);
     const [mainInvoiceFile, setMainInvoiceFile] = useState(null);
@@ -35,6 +41,11 @@ function Dispatch() {
     const [supplementaryQty, setSupplementaryQty] = useState(0);
     const [supplementaryInvoiceFile, setSupplementaryInvoiceFile] = useState(null);
     const [supplementaryQcFile, setSupplementaryQcFile] = useState(null);
+    const [mainQcFile, setMainQcFile] = useState(null);
+    const [mainInvoiceInputKey, setMainInvoiceInputKey] = useState(0);
+    const [mainQcInputKey, setMainQcInputKey] = useState(0);
+    const [supplementaryInvoiceInputKey, setSupplementaryInvoiceInputKey] = useState(0);
+    const [supplementaryQcInputKey, setSupplementaryQcInputKey] = useState(0);
     const [isShortClose, setIsShortClose] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [searchField, setSearchField] = useState({ value: 'po_number', label: 'PO Number' });
@@ -86,29 +97,57 @@ function Dispatch() {
         if (!file || file.type !== 'application/pdf') {
             return alert('Please upload a valid PDF.');
         }
+        if (file.size === 0) {
+            return alert('The selected QC report is empty. Please choose a PDF with content.');
+        }
 
         const formData = new FormData();
         formData.append('qc_report', file);
 
         try {
-            await api.post(`/api/dispatch/${orderId}/upload-qc/`, formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await api.post(`/api/dispatch/${orderId}/upload-qc/`, formData);
             alert('QC Report uploaded!');
             fetchEligibleOrders();
         } catch (err) {
-            alert('Upload failed.');
+            alert(err.response?.data?.error || err.response?.data?.detail || 'Upload failed.');
         }
+    };
+
+    const handleRemoveMainQc = async () => {
+        if (!dispatchingOrder) return;
+        try {
+            await api.delete(`/api/dispatch/${dispatchingOrder.id}/remove-qc/`);
+            setDispatchingOrder((prev) => ({
+                ...prev,
+                qc_report_status: 'MISSING',
+                qc_report_url: null,
+            }));
+            setMainQcFile(null);
+            setMainQcInputKey((prev) => prev + 1);
+            fetchEligibleOrders();
+        } catch (err) {
+            alert(err.response?.data?.error || 'Failed to remove QC report.');
+        }
+    };
+
+    const clearSelectedFile = (setter, resetInputKey) => {
+        setter(null);
+        resetInputKey((prev) => prev + 1);
     };
 
     const openDispatchModal = (order) => {
         setDispatchingOrder(order);
         setShipQty(Math.min(order.quantity, order.available_finished_goods));
         setMainInvoiceFile(null);
+        setMainInvoiceInputKey((prev) => prev + 1);
+        setMainQcFile(null);
+        setMainQcInputKey((prev) => prev + 1);
         setShowSupplementary(false);
         setSupplementaryQty(0);
         setSupplementaryInvoiceFile(null);
+        setSupplementaryInvoiceInputKey((prev) => prev + 1);
         setSupplementaryQcFile(null);
+        setSupplementaryQcInputKey((prev) => prev + 1);
         setIsShortClose(false);
     };
 
@@ -116,10 +155,15 @@ function Dispatch() {
         setDispatchingOrder(null);
         setShipQty(0);
         setMainInvoiceFile(null);
+        setMainInvoiceInputKey((prev) => prev + 1);
+        setMainQcFile(null);
+        setMainQcInputKey((prev) => prev + 1);
         setShowSupplementary(false);
         setSupplementaryQty(0);
         setSupplementaryInvoiceFile(null);
+        setSupplementaryInvoiceInputKey((prev) => prev + 1);
         setSupplementaryQcFile(null);
+        setSupplementaryQcInputKey((prev) => prev + 1);
         setIsShortClose(false);
     };
 
@@ -129,6 +173,11 @@ function Dispatch() {
         if (shipQty > dispatchingOrder.quantity - dispatchingOrder.shipped_quantity) return alert('Main shipped quantity exceeds the remaining ordered quantity.');
         if (showSupplementary && supplementaryQty <= 0) return alert('Supplementary quantity must be positive.');
         if (showSupplementary && !supplementaryQcFile) return alert('Supplementary QC report PDF is required.');
+
+        const selectedFiles = [mainInvoiceFile, supplementaryInvoiceFile, supplementaryQcFile].filter(Boolean);
+        if (selectedFiles.some((file) => file.size === 0)) {
+            return alert('One of the selected PDF files is empty. Please choose a PDF with content.');
+        }
 
         const totalShipped = shipQty + (showSupplementary ? supplementaryQty : 0);
         if (totalShipped > dispatchingOrder.available_finished_goods) {
@@ -144,28 +193,43 @@ function Dispatch() {
             finalShortClose = confirmPartial;
         }
 
+        if (dispatchingOrder.qc_report_status !== 'UPLOADED') {
+            return alert('Main QC report PDF is required. Upload it from the order row before dispatching.');
+        }
+
         const formData = new FormData();
         formData.append('order', dispatchingOrder.id);
         formData.append('shipped_quantity', shipQty);
         formData.append('is_short_close', finalShortClose);
         formData.append('has_supplementary', showSupplementary ? 'true' : 'false');
         formData.append('supplementary_shipped_quantity', showSupplementary ? supplementaryQty : 0);
-        formData.append('main_invoice_pdf', mainInvoiceFile);
+        if (mainInvoiceFile) {
+            formData.append('main_invoice_pdf', mainInvoiceFile);
+        }
+        if (mainQcFile) {
+            formData.append('main_qc_report_pdf', mainQcFile);
+        }
         if (showSupplementary) {
-            formData.append('supplementary_invoice_pdf', supplementaryInvoiceFile);
-            formData.append('supplementary_qc_report_pdf', supplementaryQcFile);
+            if (supplementaryInvoiceFile) {
+                formData.append('supplementary_invoice_pdf', supplementaryInvoiceFile);
+            }
+            if (supplementaryQcFile) {
+                formData.append('supplementary_qc_report_pdf', supplementaryQcFile);
+            }
         }
 
         setSubmitting(true);
         try {
-            await api.post('/api/dispatch/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await api.post('/api/dispatch/', formData);
             alert('Dispatch successful!');
             closeDispatchModal();
             fetchEligibleOrders();
         } catch (err) {
-            alert(err.response?.data?.error || 'Dispatch failed.');
+            const data = err.response?.data;
+            const message = data?.error
+                || (typeof data === 'object' && data !== null ? JSON.stringify(data) : null)
+                || 'Dispatch failed.';
+            alert(message);
         } finally {
             setSubmitting(false);
         }
@@ -183,9 +247,7 @@ function Dispatch() {
             formData.append('document_type', documentType);
             setUploadingInvoice(true);
             try {
-                await api.post(`/api/dispatch/${dispatchId}/upload-invoice/`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.post(`/api/dispatch/${dispatchId}/upload-invoice/`, formData);
                 alert('Invoice uploaded successfully.');
                 fetchEligibleOrders();
             } catch (err) {
@@ -379,22 +441,33 @@ function Dispatch() {
                                 </label>
                                 <label style={{ display: 'block', marginBottom: '10px' }}>
                                     <span style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>Main Invoice PDF</span>
-                                    <input type="file" accept=".pdf" onChange={(e) => setMainInvoiceFile(e.target.files[0])} style={{ width: '100%' }} />
-                                </label>
-                                <div style={{ padding: '8px 10px', borderRadius: '6px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', fontSize: '13px' }}>
-                                    <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Main QC Report</div>
-                                    {dispatchingOrder.qc_report_status === 'UPLOADED' ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => openDocument(dispatchingOrder.qc_report_url)}
-                                            style={{ color: '#2563eb', fontWeight: 'bold', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
-                                        >
-                                            View uploaded QC report
-                                        </button>
-                                    ) : (
-                                        <div>Upload the QC report from the order row before dispatching.</div>
+                                    <input key={mainInvoiceInputKey} type="file" accept=".pdf" onChange={(e) => setMainInvoiceFile(e.target.files[0])} style={{ width: '100%' }} />
+                                    {mainInvoiceFile && (
+                                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '6px', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                                            <span style={{ fontSize: '12px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{mainInvoiceFile.name}</span>
+                                            <button type="button" onClick={() => clearSelectedFile(setMainInvoiceFile, setMainInvoiceInputKey)} style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Remove</button>
+                                        </div>
                                     )}
-                                </div>
+                                </label>
+                                <label style={{ display: 'block', marginBottom: '10px' }}>
+                                    <span style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>Main QC Report PDF</span>
+                                    {dispatchingOrder.qc_report_status === 'UPLOADED' ? (
+                                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '6px', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => openDocument(dispatchingOrder.qc_report_url)}
+                                                style={{ fontSize: '12px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+                                            >
+                                                {getFilenameFromUrl(dispatchingOrder.qc_report_url)}
+                                            </button>
+                                            <button type="button" onClick={handleRemoveMainQc} style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', flexShrink: 0 }}>Remove</button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px' }}>
+                                            Upload the QC report from the order row before dispatching.
+                                        </div>
+                                    )}
+                                </label>
                             </div>
 
                             <button
@@ -419,11 +492,23 @@ function Dispatch() {
                                     </label>
                                     <label style={{ display: 'block', marginBottom: '10px' }}>
                                         <span style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>Supplementary Invoice PDF</span>
-                                        <input type="file" accept=".pdf" onChange={(e) => setSupplementaryInvoiceFile(e.target.files[0])} style={{ width: '100%' }} />
+                                        <input key={supplementaryInvoiceInputKey} type="file" accept=".pdf" onChange={(e) => setSupplementaryInvoiceFile(e.target.files[0])} style={{ width: '100%' }} />
+                                        {supplementaryInvoiceFile && (
+                                            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '6px', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                                                <span style={{ fontSize: '12px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{supplementaryInvoiceFile.name}</span>
+                                                <button type="button" onClick={() => clearSelectedFile(setSupplementaryInvoiceFile, setSupplementaryInvoiceInputKey)} style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Remove</button>
+                                            </div>
+                                        )}
                                     </label>
                                     <label style={{ display: 'block' }}>
                                         <span style={{ display: 'block', fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>Supplementary QC Report PDF</span>
-                                        <input type="file" accept=".pdf" onChange={(e) => setSupplementaryQcFile(e.target.files[0])} style={{ width: '100%' }} />
+                                        <input key={supplementaryQcInputKey} type="file" accept=".pdf" onChange={(e) => setSupplementaryQcFile(e.target.files[0])} style={{ width: '100%' }} />
+                                        {supplementaryQcFile && (
+                                            <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', borderRadius: '6px', background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                                                <span style={{ fontSize: '12px', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{supplementaryQcFile.name}</span>
+                                                <button type="button" onClick={() => clearSelectedFile(setSupplementaryQcFile, setSupplementaryQcInputKey)} style={{ border: 'none', background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Remove</button>
+                                            </div>
+                                        )}
                                     </label>
                                 </div>
                             )}

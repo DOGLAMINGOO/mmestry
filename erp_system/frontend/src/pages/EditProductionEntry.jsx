@@ -18,6 +18,12 @@ function EditProductionEntry() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
+
     const [form, setForm] = useState({
         machine_name: '',
         operator_name: '',
@@ -48,8 +54,8 @@ function EditProductionEntry() {
                 
                 const data = reportRes.data;
                 setReport(data);
-                setMachines(machRes.data.map(m => ({ value: m.name, label: m.name })));
-                setOperators(opRes.data.map(o => ({ value: o.name, label: o.name })));
+                setMachines(normalizeListData(machRes.data).map(m => ({ value: m.name, label: m.name })));
+                setOperators(normalizeListData(opRes.data).map(o => ({ value: o.name, label: o.name })));
                 setUserRole(userRes.data.role || null);
                 
                 setForm({
@@ -81,7 +87,10 @@ function EditProductionEntry() {
     }, [id, navigate]);
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const value = e.target.type === 'number'
+            ? e.target.value.replace(/^0+(?=\d)/, '')
+            : e.target.value;
+        setForm({ ...form, [e.target.name]: value });
     };
 
     const handleSubmit = async (e) => {

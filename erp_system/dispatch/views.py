@@ -51,6 +51,20 @@ class DispatchViewSet(viewsets.ModelViewSet):
         order.save()
         return Response({"message": "QC Report uploaded successfully", "qc_report_url": order.qc_report.url})
 
+    @action(detail=True, methods=['delete'], url_path='remove-qc')
+    def remove_qc(self, request, pk=None):
+        try:
+            order = CustomerOrder.objects.get(id=pk)
+        except CustomerOrder.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if order.qc_report:
+            order.qc_report.delete(save=False)
+            order.qc_report = None
+            order.save()
+
+        return Response({"message": "QC Report removed successfully"})
+
     @action(detail=True, methods=['post'], url_path='upload-invoice')
     def upload_invoice(self, request, pk=None):
         try:
@@ -150,9 +164,13 @@ class DispatchViewSet(viewsets.ModelViewSet):
         if has_supplementary and not supplementary_qc_report_pdf:
             return Response({"error": "Supplementary QC report PDF is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if order.status not in ['READY_FOR_DISPATCH', 'PARTIALLY_SHIPPED']:
+        if order.status not in ['IN_PRODUCTION', 'READY_FOR_DISPATCH', 'PARTIALLY_SHIPPED']:
             return Response({"error": f"Order status is {order.status}. Cannot dispatch."}, status=status.HTTP_400_BAD_REQUEST)
-        if not hasattr(order, 'production_report') or getattr(order.production_report, 'status', None) != 'COMPLETED':
+        if order.status == 'IN_PRODUCTION':
+            production_status = getattr(getattr(order, 'production_report', None), 'status', None)
+            if production_status != 'COMPLETED':
+                return Response({"error": "Production must be completed before dispatching."}, status=status.HTTP_400_BAD_REQUEST)
+        elif not hasattr(order, 'production_report') or getattr(order.production_report, 'status', None) != 'COMPLETED':
             return Response({"error": "Production must be completed before dispatching."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
