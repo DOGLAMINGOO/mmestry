@@ -176,9 +176,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
+# Use an absolute URL so Django admin assets resolve to /static/... rather
+# than relative paths such as /admin/static/.... WhiteNoise serves the files
+# collected into STATIC_ROOT in production.
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# django-cloudinary-storage still checks this legacy setting during
+# collectstatic; keep it aligned with the Django 5.1+ STORAGES definition.
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
