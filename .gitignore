@@ -8,7 +8,8 @@ __pycache__/
 # Django
 db.sqlite3
 .env
-media/
+**/media/
+**/staticfiles/
 
 # Node
 node_modules/
@@ -18,5 +19,3 @@ build/
 # VS Code
 .vscode/
 PROJECT_CONTEXT.md
-
-media/
