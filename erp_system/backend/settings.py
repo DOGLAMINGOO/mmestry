@@ -181,6 +181,9 @@ USE_TZ = True
 # collected into STATIC_ROOT in production.
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Compat shim: django-cloudinary-storage's collectstatic override still reads
+# this legacy setting (removed in Django 6.0).  Keep it aligned with STORAGES.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
