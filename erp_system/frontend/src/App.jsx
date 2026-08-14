@@ -1,5 +1,5 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Login from './pages/Login.jsx'
 import NotFound from './pages/NotFound.jsx'
 import Home from './pages/Home.jsx'
@@ -17,142 +17,96 @@ import ProductionReportsHistory from './pages/ProductionReportsHistory.jsx'
 import InventoryLogs from './pages/InventoryLogs.jsx'
 import StockReceiptLogs from './pages/StockReceiptLogs.jsx'
 import CustomerOrderLogs from './pages/CustomerOrderLogs.jsx'
-import ProtectedRoute from './components/ProtectedRoute.jsx'
+import AdminManagement from './pages/AdminManagement.jsx'
+import ERPLayout from './components/ERPLayout.jsx'
+import api from './api'
 
 function Logout() {
   localStorage.clear()
   return <Navigate to="/login" />
 }
 
-function App() {
-  return (
-    <>
-      <BrowserRouter>
-        <Routes>
-          <Route path='/login' element={<Login />} />
-          <Route path='/logout' element={<Logout />} />
-          <Route
-            path='/'
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>} />
-          <Route
-            path='/inventory'
-            element={
-              <ProtectedRoute>
-                <Inventory />
-              </ProtectedRoute>} />
-          <Route
-            path='/customer-orders'
-            element={
-              <ProtectedRoute>
-                <CustomerOrders />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/customer-orders/new'
-            element={
-              <ProtectedRoute>
-                <CreateCustomerOrder />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/customer-orders/edit/:id'
-            element={
-              <ProtectedRoute>
-                <EditCustomerOrder />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/inventory/:id'
-            element={
-              <ProtectedRoute>
-                <InventoryDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/production'
-            element={
-              <ProtectedRoute>
-                <Production />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/production/start/:id'
-            element={
-              <ProtectedRoute>
-                <CreateProductionEntry />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/production/report/:id'
-            element={
-              <ProtectedRoute>
-                <EditProductionEntry />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/dispatch'
-            element={
-              <ProtectedRoute>
-                <Dispatch />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/dispatch-history'
-            element={
-              <ProtectedRoute>
-                <DispatchHistoryPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/production-reports'
-            element={
-              <ProtectedRoute>
-                <ProductionReportsHistory />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/inventory-logs'
-            element={
-              <ProtectedRoute>
-                <InventoryLogs />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/stock-receipt-logs'
-            element={
-              <ProtectedRoute>
-                <StockReceiptLogs />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path='/customer-order-logs'
-            element={
-              <ProtectedRoute>
-                <CustomerOrderLogs />
-              </ProtectedRoute>
-            }
-          />
-          <Route path='*' element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+// App wrapper with user context
+function AppWithUser() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const location = useLocation()
 
-    </>
-  );
+  useEffect(() => {
+    const fetchUser = async () => {
+      const accessToken = localStorage.getItem('access')
+      if (accessToken) {
+        try {
+          const res = await api.get('/api/user/me/')
+          setUser(res.data)
+        } catch (err) {
+          console.error('Failed to fetch user:', err)
+          localStorage.clear()
+        }
+      }
+      setLoading(false)
+    }
+    
+    fetchUser()
+  }, [])
+
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/logout'
+  
+  if (loading && !isAuthPage) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route path='/login' element={<Login />} />
+      <Route path='/logout' element={<Logout />} />
+      
+      {user && user.role ? (
+        <>
+          <Route element={<LayoutWrapper user={user}><Home /></LayoutWrapper>} path="/" />
+          <Route element={<LayoutWrapper user={user}><Inventory /></LayoutWrapper>} path="/inventory" />
+          <Route element={<LayoutWrapper user={user}><InventoryDetail /></LayoutWrapper>} path="/inventory/:id" />
+          <Route element={<LayoutWrapper user={user}><CustomerOrders /></LayoutWrapper>} path="/customer-orders" />
+          <Route element={<LayoutWrapper user={user}><CreateCustomerOrder /></LayoutWrapper>} path="/customer-orders/new" />
+          <Route element={<LayoutWrapper user={user}><EditCustomerOrder /></LayoutWrapper>} path="/customer-orders/edit/:id" />
+          <Route element={<LayoutWrapper user={user}><Production /></LayoutWrapper>} path="/production" />
+          <Route element={<LayoutWrapper user={user}><CreateProductionEntry /></LayoutWrapper>} path="/production/start/:id" />
+          <Route element={<LayoutWrapper user={user}><EditProductionEntry /></LayoutWrapper>} path="/production/report/:id" />
+          <Route element={<LayoutWrapper user={user}><Dispatch /></LayoutWrapper>} path="/dispatch" />
+          <Route element={<LayoutWrapper user={user}><DispatchHistoryPage /></LayoutWrapper>} path="/dispatch-history" />
+          <Route element={<LayoutWrapper user={user}><ProductionReportsHistory /></LayoutWrapper>} path="/production-reports" />
+          <Route element={<LayoutWrapper user={user}><InventoryLogs /></LayoutWrapper>} path="/inventory-logs" />
+          <Route element={<LayoutWrapper user={user}><StockReceiptLogs /></LayoutWrapper>} path="/stock-receipt-logs" />
+          <Route element={<LayoutWrapper user={user}><CustomerOrderLogs /></LayoutWrapper>} path="/customer-order-logs" />
+          {user.role === 'ADMIN' && (
+            <Route element={<LayoutWrapper user={user}><AdminManagement /></LayoutWrapper>} path="/admin/management" />
+          )}
+        </>
+      ) : (
+        <Route path='*' element={<Navigate to="/login" />} />
+      )}
+      
+      <Route path='*' element={<NotFound />} />
+    </Routes>
+  )
 }
 
-export default App;
+function LayoutWrapper({ user, children }) {
+  return <ERPLayout user={user}>{children}</ERPLayout>
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppWithUser />
+    </BrowserRouter>
+  )
+}
+
+export default App

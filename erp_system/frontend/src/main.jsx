@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
-import './styles/global.css'
+import './styles/globals.css'
 
 // Do not let a touchpad scroll or arrow key silently change a quantity.
 document.addEventListener('wheel', (event) => {

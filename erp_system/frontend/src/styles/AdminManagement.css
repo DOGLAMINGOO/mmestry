@@ -1,0 +1,375 @@
+/* Admin Management Page Styles */
+
+.admin-management-container {
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.admin-management-container h1 {
+    color: #1f2937;
+    margin-bottom: 24px;
+    font-size: 28px;
+}
+
+.admin-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.admin-tab-button {
+    padding: 12px 20px;
+    border: none;
+    background: #f3f4f6;
+    color: #1f2937;
+    cursor: pointer;
+    font-weight: bold;
+    border-bottom: 3px solid transparent;
+    font-size: 14px;
+    text-transform: capitalize;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-tab-button.active {
+    background: #3b82f6;
+    color: white;
+    border-bottom-color: #1e40af;
+}
+
+.admin-tab-button:hover {
+    background: #e5e7eb;
+}
+
+.admin-tab-button.active:hover {
+    background: #3b82f6;
+}
+
+.admin-search-filter-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    align-items: center;
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    flex-wrap: wrap;
+}
+
+.admin-search-field {
+    min-width: 220px;
+}
+
+.admin-search-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #374151;
+}
+
+.admin-search-term {
+    flex: 1;
+    min-width: 300px;
+}
+
+.admin-search-term label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #374151;
+}
+
+.admin-clear-button {
+    margin-top: 22px;
+    padding: 10px 16px;
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    cursor: 'pointer';
+    font-weight: bold;
+    color: #b91c1c;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-clear-button:hover {
+    background: #fecaca;
+    border-color: #f87171;
+}
+
+.admin-add-button {
+    padding: 10px 20px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-transform: capitalize;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-add-button:hover {
+    background: #059669;
+}
+
+.admin-table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+}
+
+.admin-table thead {
+    background: #f3f4f6;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+    color: #374151;
+}
+
+.admin-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.admin-table tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+.admin-table td {
+    padding: 12px;
+    color: #1f2937;
+}
+
+.admin-table-actions {
+    text-align: center;
+}
+
+.admin-edit-button,
+.admin-delete-button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-edit-button {
+    background: #3b82f6;
+    color: white;
+}
+
+.admin-edit-button:hover {
+    background: #2563eb;
+}
+
+.admin-delete-button {
+    background: #ef4444;
+    color: white;
+    margin-right: 0;
+}
+
+.admin-delete-button:hover {
+    background: #dc2626;
+}
+
+.admin-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.admin-modal {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-modal h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #1f2937;
+}
+
+.admin-form-group {
+    margin-bottom: 16px;
+}
+
+.admin-form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: bold;
+    color: #374151;
+}
+
+.admin-form-group input,
+.admin-form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+.admin-form-group input:focus,
+.admin-form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.admin-checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #374151;
+    font-weight: bold;
+}
+
+.admin-modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.admin-cancel-button,
+.admin-submit-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-cancel-button {
+    background: #e5e7eb;
+    border: 1px solid #d1d5db;
+    color: #374151;
+}
+
+.admin-cancel-button:hover {
+    background: #d1d5db;
+}
+
+.admin-submit-button {
+    background: #10b981;
+    color: white;
+}
+
+.admin-submit-button:hover {
+    background: #059669;
+}
+
+.admin-delete-confirm-modal {
+    background: white;
+    border-radius: 8px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.admin-delete-confirm-modal h2 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    color: #1f2937;
+}
+
+.admin-delete-confirm-modal p {
+    color: #6b7280;
+    margin-bottom: 24px;
+}
+
+.admin-status-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.admin-status-badge.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.admin-status-badge.inactive {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.admin-no-items {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .admin-search-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .admin-search-field,
+    .admin-search-term {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .admin-clear-button {
+        margin-top: 0;
+        width: 100%;
+    }
+
+    .admin-table-container {
+        font-size: 12px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 8px;
+    }
+
+    .admin-edit-button,
+    .admin-delete-button {
+        padding: 4px 8px;
+        font-size: 10px;
+        margin-right: 2px;
+    }
+
+    .admin-modal {
+        max-width: 90%;
+    }
+}
