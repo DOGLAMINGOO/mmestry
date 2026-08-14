@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingCart, Factory, Truck, ShieldCheck } from 'lucide-react';
+import { Package, ShoppingCart, Factory, Truck, Settings } from 'lucide-react';
 import api from '../api';
 
 const quickActions = [
@@ -74,7 +74,7 @@ function Home() {
                             <div className="flex h-full min-h-[180px] flex-col justify-between rounded-2xl bg-slate-950/10 p-5">
                                 <div className="flex items-center justify-between">
                                     <span className="rounded-xl bg-white/15 p-3 text-white">
-                                        <ShieldCheck size={28} />
+                                        <Settings size={28} />
                                     </span>
                                     <span className="text-xs font-semibold uppercase tracking-[0.15em] text-white/80">Admin</span>
                                 </div>

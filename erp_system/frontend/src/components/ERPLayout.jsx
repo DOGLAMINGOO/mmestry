@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Home, Package, ShoppingCart, Zap, Truck, Settings, ChevronDown, LogOut, Bell, CalendarClock, CircleDashed, AlertTriangle, Warehouse, Sparkles } from 'lucide-react';
+import { Menu, X, Home, Package, ShoppingCart, Factory, Truck, Settings, ChevronDown, LogOut, Bell, CalendarClock, CircleDashed, AlertTriangle, Warehouse, Sparkles } from 'lucide-react';
 import api from '../api';
 import { Button } from './ui/Button';
 import { Avatar, AvatarImage, AvatarFallback } from './ui/Avatar';
@@ -42,7 +42,7 @@ export default function ERPLayout({ children, user }) {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Orders', href: '/customer-orders', icon: ShoppingCart },
-    { name: 'Production', href: '/production', icon: Zap },
+    { name: 'Production', href: '/production', icon: Factory },
     { name: 'Dispatch', href: '/dispatch', icon: Truck },
     ...(user?.role === 'ADMIN' ? [{ name: 'Admin Settings', href: '/admin/management', icon: Settings }] : []),
   ];
