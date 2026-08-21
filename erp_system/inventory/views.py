@@ -11,6 +11,9 @@ from django.utils.encoding import force_str
 from django.core.exceptions import ValidationError
 from django.db.models import OuterRef, Subquery, DateTimeField, CharField, Sum, IntegerField, Value
 from django.db.models.functions import Coalesce
+from django.http import StreamingHttpResponse
+from io import StringIO
+import csv
 from customer_order.models import CustomerOrder
 from .permissions import CanAdjustInventory
 
@@ -112,6 +115,52 @@ class InventoryView(generics.ListAPIView):
             )
             .select_related("company", "part")
         )
+
+
+class InventoryReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        inventory = InventoryView().get_queryset()
+        company_code = request.query_params.get("company")
+        if company_code:
+            inventory = inventory.filter(company__code=company_code.upper())
+
+        def rows():
+            buffer = StringIO()
+            writer = csv.writer(buffer)
+            writer.writerow([
+                "Company",
+                "Part Number",
+                "Part",
+                "Total Blanks",
+                "Reserved Blanks",
+                "Available Blanks",
+                "Finished Parts",
+                "Last Adjusted By",
+                "Last Adjusted At",
+            ])
+            yield buffer.getvalue()
+
+            for item in inventory.iterator():
+                buffer.seek(0)
+                buffer.truncate(0)
+                writer.writerow([
+                    item.company.name,
+                    item.part.part_number,
+                    item.part.name,
+                    item.total_blanks,
+                    item.reserved_blanks_qty or 0,
+                    (item.total_blanks or 0) - (item.reserved_blanks_qty or 0),
+                    item.finished_blanks,
+                    item.last_adjusted_by or "",
+                    item.last_adjusted_at.isoformat() if item.last_adjusted_at else "",
+                ])
+                yield buffer.getvalue()
+
+        response = StreamingHttpResponse(rows(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="inventory-report.csv"'
+        return response
 
 
 class InventoryDetailView(generics.RetrieveAPIView):

@@ -17,6 +17,8 @@ function Inventory() {
 
     // Frontend state
     const [userRole, setUserRole] = useState(null);
+    const [reportLoading, setReportLoading] = useState(false);
+    const [reportCompany, setReportCompany] = useState('both');
 
     const normalizeListData = (data) => {
         if (Array.isArray(data)) return data;
@@ -178,6 +180,27 @@ function Inventory() {
         }
     };
 
+    const downloadReport = async () => {
+        setReportLoading(true);
+        try {
+            const query = reportCompany === 'both' ? '' : `?company=${reportCompany}`;
+            const response = await api.get(`/api/inventory/report/${query}`, { responseType: 'blob' });
+            const url = window.URL.createObjectURL(response.data);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `inventory-report-${reportCompany}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Failed to generate inventory report.');
+            console.error(err);
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
     // fetch current user to determine role-based permissions
     useEffect(() => {
         const fetchUser = async () => {
@@ -226,6 +249,25 @@ function Inventory() {
                     >
                         View Receipt Logs
                     </button>
+                    <button
+                        type="button"
+                        onClick={downloadReport}
+                        disabled={reportLoading}
+                        style={{ background: '#2563eb', color: '#fff', padding: '8px 16px', borderRadius: '4px', border: 'none', fontWeight: 'bold', cursor: reportLoading ? 'wait' : 'pointer', opacity: reportLoading ? 0.7 : 1 }}
+                    >
+                        {reportLoading ? 'Generating Report...' : 'Download Stock Report'}
+                    </button>
+                    <select
+                        aria-label="Report company"
+                        value={reportCompany}
+                        onChange={(event) => setReportCompany(event.target.value)}
+                        disabled={reportLoading}
+                        style={{ padding: '8px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff' }}
+                    >
+                        <option value="A">Company A</option>
+                        <option value="B">Company B</option>
+                        <option value="both">Both Companies</option>
+                    </select>
                 </div>
             </div>
             <h1>Inventory</h1>

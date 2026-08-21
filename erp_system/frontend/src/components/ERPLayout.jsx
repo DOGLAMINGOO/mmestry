@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, Home, Package, ShoppingCart, Factory, Truck, Settings, ChevronDown, LogOut, Bell, CalendarClock, CircleDashed, AlertTriangle, Warehouse, Sparkles } from 'lucide-react';
 import api from '../api';
@@ -36,6 +36,7 @@ function BrandMark({ compact = false }) {
 export default function ERPLayout({ children, user }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [notifications, setNotifications] = useState([]);
+  const [nearestDeadline, setNearestDeadline] = useState(null);
   const location = useLocation();
 
   const navigationItems = [
@@ -51,7 +52,7 @@ export default function ERPLayout({ children, user }) {
     const fetchNotifications = async () => {
       try {
         const [ordersRes, inventoryRes] = await Promise.all([
-          api.get('/api/customer-orders/'),
+          api.get('/api/customer-orders/?page_size=1000'),
           api.get('/api/inventory/')
         ]);
 
@@ -61,6 +62,16 @@ export default function ERPLayout({ children, user }) {
         const nextAlerts = [];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const activeOrders = orders.filter((order) => (
+          order.deadline && !['DISPATCHED', 'CLOSED'].includes(order.status)
+        ));
+        const datedOrders = activeOrders
+          .map((order) => ({ ...order, deadlineDate: new Date(`${order.deadline}T00:00:00`) }))
+          .filter((order) => !Number.isNaN(order.deadlineDate.getTime()));
+        const upcomingOrders = datedOrders.filter((order) => order.deadlineDate >= today);
+        const nearestOrder = (upcomingOrders.length ? upcomingOrders : datedOrders)
+          .sort((a, b) => a.deadlineDate - b.deadlineDate)[0];
+        setNearestDeadline(nearestOrder?.deadlineDate || null);
 
         orders.forEach((order) => {
           if (!order.deadline || ['DISPATCHED', 'CLOSED'].includes(order.status)) return;
@@ -112,16 +123,6 @@ export default function ERPLayout({ children, user }) {
 
     fetchNotifications();
   }, []);
-
-  const nearestDeadline = useMemo(() => {
-    const deadlines = notifications
-      .filter((item) => item.type === 'deadline')
-      .map((item) => item.timestamp)
-      .filter(Boolean);
-
-    if (!deadlines.length) return null;
-    return new Date(Math.min(...deadlines.map((date) => new Date(date).getTime())));
-  }, [notifications]);
 
   const notificationCount = notifications.length;
 
