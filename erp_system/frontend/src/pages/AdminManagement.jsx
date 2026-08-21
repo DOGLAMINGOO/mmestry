@@ -33,6 +33,8 @@ function AdminManagement() {
     // Search and filter
     const [searchField, setSearchField] = useState({ value: 'name', label: 'Name' });
     const [searchTerm, setSearchTerm] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 25;
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -58,19 +60,44 @@ function AdminManagement() {
         checkAuth();
     }, [navigate]);
 
+    const fetchAllPages = async (endpoint) => {
+        const records = [];
+        const [path, query = ''] = endpoint.split('?');
+        const params = new URLSearchParams(query);
+        let page = Number(params.get('page') || '1');
+
+        while (true) {
+            params.set('page', String(page));
+            const response = await api.get(`${path}?${params.toString()}`);
+            const data = response.data;
+
+            if (Array.isArray(data)) {
+                records.push(...data);
+                break;
+            }
+
+            const pageResults = data?.results || [];
+            records.push(...pageResults);
+            if (!data?.next || pageResults.length === 0) break;
+            page += 1;
+        }
+
+        return records;
+    };
+
     const fetchAllData = async () => {
         try {
-            const [partRes, machineRes, operatorRes, clientRes] = await Promise.all([
-                api.get('/api/admin/parts/'),
-                api.get('/api/admin/machines/'),
-                api.get('/api/admin/operators/'),
-                api.get('/api/admin/clients/'),
+            const [allParts, allMachines, allOperators, allClients] = await Promise.all([
+                fetchAllPages('/api/admin/parts/?page=1'),
+                fetchAllPages('/api/admin/machines/?page=1'),
+                fetchAllPages('/api/admin/operators/?page=1'),
+                fetchAllPages('/api/admin/clients/?page=1'),
             ]);
 
-            setParts(partRes.data.results || partRes.data);
-            setMachines(machineRes.data.results || machineRes.data);
-            setOperators(operatorRes.data.results || operatorRes.data);
-            setClients(clientRes.data.results || clientRes.data);
+            setParts(allParts);
+            setMachines(allMachines);
+            setOperators(allOperators);
+            setClients(allClients);
         } catch (err) {
             console.error('Failed to fetch data:', err);
             alert('Failed to fetch data');
@@ -138,7 +165,17 @@ function AdminManagement() {
             result = result.filter(item => item.id === searchTerm.value);
         }
         return result;
-    }, [activeTab, searchTerm]);
+    }, [activeTab, searchField, searchTerm, parts, machines, operators, clients]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+    const visibleData = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filteredData.slice(start, start + pageSize);
+    }, [filteredData, currentPage]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchField, searchTerm]);
 
     const openAddModal = () => {
         setFormData({});
@@ -249,6 +286,7 @@ function AdminManagement() {
                             setActiveTab(tab);
                             setSearchTerm(null);
                             setSearchField({ value: 'name', label: 'Name' });
+                            setCurrentPage(1);
                         }}
                         style={{
                             padding: '12px 20px',
@@ -392,8 +430,8 @@ function AdminManagement() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredData.length > 0 ? (
-                            filteredData.map((item, idx) => (
+                        {visibleData.length > 0 ? (
+                            visibleData.map((item, idx) => (
                                 <tr key={item.id} style={{
                                     borderBottom: '1px solid #e5e7eb',
                                     background: idx % 2 === 0 ? '#fff' : '#f9fafb',
@@ -581,6 +619,18 @@ function AdminManagement() {
                     </tbody>
                 </table>
             </div>
+
+            {filteredData.length > 0 && (
+                <PaginationControls
+                    count={filteredData.length}
+                    page={currentPage}
+                    pageSize={pageSize}
+                    next={currentPage < totalPages ? 'next' : null}
+                    previous={currentPage > 1 ? 'previous' : null}
+                    onPrevious={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    onNext={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                />
+            )}
 
             {/* Add/Edit Modal */}
             {(showAddModal || showEditModal) && (

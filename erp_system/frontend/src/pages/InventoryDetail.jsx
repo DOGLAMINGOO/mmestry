@@ -8,9 +8,15 @@ function InventoryDetail() {
     const navigate = useNavigate();
     const [item, setItem] = useState(null);
     const [part, setPart] = useState(null);
-    const [companiesWithPart, setCompaniesWithPart] = useState([]);
+    const [companyInventories, setCompanyInventories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    const normalizeListData = (data) => {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.results)) return data.results;
+        return [];
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -21,7 +27,8 @@ function InventoryDetail() {
 
                 // Fetch parts to get part details (part_number, cycle_time_minutes)
                 const partsResp = await api.get('/api/parts/');
-                const foundPart = partsResp.data.find(p => p.id === invItem.part) || null;
+                const parts = normalizeListData(partsResp.data);
+                const foundPart = parts.find(p => p.id === invItem.part) || null;
                 setPart(foundPart);
 
                 // Fetch all inventory to determine which companies have this part
@@ -31,23 +38,21 @@ function InventoryDetail() {
 
                 // Fetch companies to get codes (A/B) and names
                 const companiesResp = await api.get('/api/companies/');
-                const companiesMap = (companiesResp.data || []).reduce((acc, c) => {
+                const companies = normalizeListData(companiesResp.data);
+                const companiesMap = companies.reduce((acc, c) => {
                     acc[c.id] = c;
                     return acc;
                 }, {});
 
-                const uniqueCompanies = [];
-                const seen = new Set();
-                samePart.forEach(i => {
-                    const cid = i.company;
-                    if (!seen.has(cid)) {
-                        seen.add(cid);
-                        const company = companiesMap[cid] || { id: cid, name: i.company_name };
-                        uniqueCompanies.push(company);
-                    }
-                });
+                const inventoriesWithCompany = samePart.map(inventory => ({
+                    ...inventory,
+                    company: companiesMap[inventory.company] || {
+                        id: inventory.company,
+                        name: inventory.company_name,
+                    },
+                }));
 
-                setCompaniesWithPart(uniqueCompanies);
+                setCompanyInventories(inventoriesWithCompany);
             } catch (err) {
                 console.error(err);
                 setError('Failed to load inventory detail.');
@@ -83,27 +88,43 @@ function InventoryDetail() {
                 )}
                 
                 <div style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <h3 style={{ marginTop: 0 }}>Stock Breakdown</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <div><strong>Total Blanks:</strong> {item.total_blanks}</div>
-                        <div><strong>Reserved Blanks:</strong> {item.reserved_blanks || 0}</div>
-                        <div>
-                            <strong>Available Blanks:</strong> 
-                            <span style={{ color: item.available_blanks < 0 ? '#dc2626' : '#16a34a', fontWeight: 'bold', marginLeft: '4px' }}>
-                                {item.available_blanks}
-                            </span>
+                    <h3 style={{ marginTop: 0 }}>Stock by Company</h3>
+                    {companyInventories.length === 0 ? (
+                        <p>No companies currently have this part.</p>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Company</th>
+                                        <th>Total Blanks</th>
+                                        <th>Reserved Blanks</th>
+                                        <th>Available Blanks</th>
+                                        <th>Finished Parts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {companyInventories.map((inventory) => (
+                                        <tr key={inventory.id}>
+                                            <td>
+                                                <strong>
+                                                    {inventory.company.code ? `${inventory.company.code} — ` : ''}
+                                                    {inventory.company.name || inventory.company_name}
+                                                </strong>
+                                            </td>
+                                            <td>{inventory.total_blanks ?? 0}</td>
+                                            <td>{inventory.reserved_blanks ?? 0}</td>
+                                            <td style={{ color: inventory.available_blanks < 0 ? '#dc2626' : '#16a34a', fontWeight: 'bold' }}>
+                                                {inventory.available_blanks ?? 0}
+                                            </td>
+                                            <td>{inventory.finished_blanks ?? 0}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                        <div><strong>Finished Parts:</strong> {item.finished_blanks}</div>
-                    </div>
+                    )}
                 </div>
-
-                <h3 style={{ marginTop: 16 }}>Companies with this part</h3>
-                {companiesWithPart.length === 0 && <p>No companies currently have this part.</p>}
-                <ul>
-                    {companiesWithPart.map(c => (
-                        <li key={c.id}>{c.code ? `${c.code} — ${c.name}` : c.name}</li>
-                    ))}
-                </ul>
             </div>
         </div>
     );
