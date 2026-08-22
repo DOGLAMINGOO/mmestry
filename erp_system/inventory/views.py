@@ -135,7 +135,7 @@ class InventoryView(generics.ListAPIView):
         if company:
             queryset = queryset.filter(company__name__icontains=company)
         if part:
-            queryset = queryset.filter(part__name__icontains=part)
+            queryset = queryset.filter(part__part_number__icontains=part)
         return queryset
 
 

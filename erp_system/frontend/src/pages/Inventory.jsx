@@ -29,7 +29,7 @@ function Inventory() {
     };
 
     // Search and Filter State
-    const [searchField, setSearchField] = useState({ value: 'part_name', label: 'Part' });
+    const [searchField, setSearchField] = useState({ value: 'part_number', label: 'Part Number' });
     const [searchTerm, setSearchTerm] = useState(null);
 
     useEffect(() => {
@@ -220,6 +220,15 @@ function Inventory() {
     // Calculate unique options for the selected search field dropdown
     const getSearchOptions = () => {
         if (!allInventory || !searchField) return [];
+        if (searchField.value === 'part_number') {
+            const uniqueParts = new Map();
+            allInventory.forEach((item) => {
+                if (item.part_number) {
+                    uniqueParts.set(item.part_number, `${item.part_number} - ${item.part_name || ''}`.trim());
+                }
+            });
+            return [...uniqueParts].map(([value, label]) => ({ value, label }));
+        }
         const uniqueValues = [...new Set(allInventory.map(o => o[searchField.value]))].filter(Boolean);
         return uniqueValues.map(val => ({ value: val, label: val }));
     };
@@ -308,7 +317,7 @@ function Inventory() {
                         }}
                         options={[
                             { value: 'company_name', label: 'Company' },
-                            { value: 'part_name', label: 'Part' },
+                            { value: 'part_number', label: 'Part Number' },
                         ]}
                     />
                 </div>
@@ -327,11 +336,11 @@ function Inventory() {
                         isClearable
                     />
                 </div>
-                {(searchTerm || searchField.value !== 'part_name') && (
+                {(searchTerm || searchField.value !== 'part_number') && (
                     <button
                         onClick={() => {
                             setSearchTerm(null);
-                            setSearchField({ value: 'part_name', label: 'Part' });
+                            setSearchField({ value: 'part_number', label: 'Part Number' });
                             fetchInventory('/api/inventory/?page=1');
                         }}
                         style={{
