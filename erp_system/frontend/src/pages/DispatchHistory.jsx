@@ -3,6 +3,7 @@ import api from '../api';
 import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 const DEFAULT_FIELD = { value: 'po_number', label: 'PO Number' };
 const FIELD_OPTIONS = [
@@ -15,6 +16,7 @@ const FIELD_OPTIONS = [
 
 function DispatchHistoryPage() {
     const [history, setHistory] = useState([]);
+    const [allHistory, setAllHistory] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -24,7 +26,10 @@ function DispatchHistoryPage() {
     const [searchTerm, setSearchTerm] = useState(null);
     const [dateFilters, setDateFilters] = useState({ start_date: '', end_date: '' });
 
-    useEffect(() => { fetchHistory(); }, []);
+    useEffect(() => {
+        fetchHistory();
+        fetchAllPages('/api/dispatch/history/?page=1').then(setAllHistory).catch(() => {});
+    }, []);
     useEffect(() => { document.title = 'Dispatch History - MMestry'; }, []);
 
     const getPageFromUrl = (url) => {
@@ -62,14 +67,22 @@ function DispatchHistoryPage() {
     };
 
     const getSearchOptions = () => {
-        if (!history.length) return [];
-        const uniqueValues = [...new Set(history.map((record) => {
+        if (!allHistory.length) return [];
+        const uniqueValues = [...new Set(allHistory.map((record) => {
             if (searchField.value === 'dispatched_by_username') {
                 return record.dispatched_by_username || 'System';
             }
             return record[searchField.value];
         }))].filter(Boolean);
         return uniqueValues.map((val) => ({ value: val, label: val }));
+    };
+
+    const handleSearchTermChange = (selected, filters = dateFilters) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (filters.start_date) params.set('start_date', filters.start_date);
+        if (filters.end_date) params.set('end_date', filters.end_date);
+        if (selected) params.set(searchField.value === 'client_name' ? 'client' : searchField.value === 'company_name' ? 'company' : searchField.value === 'part_name' ? 'part' : searchField.value === 'dispatched_by_username' ? 'dispatched_by' : searchField.value, selected.value);
+        fetchHistory(`/api/dispatch/history/?${params.toString()}`);
     };
 
     const filteredHistory = useMemo(() => {
@@ -148,19 +161,20 @@ function DispatchHistoryPage() {
                 fieldOptions={FIELD_OPTIONS}
                 getSearchOptions={getSearchOptions}
                 defaultField={DEFAULT_FIELD}
+                onSearchTermChange={handleSearchTermChange}
             />
 
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: '#f9fafb', padding: '12px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#374151' }}>Date Range Filter:</span>
                 <div>
-                    <input type="date" value={dateFilters.start_date} onChange={(e) => setDateFilters({ ...dateFilters, start_date: e.target.value })} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #d1d5db' }} />
+                    <input type="date" value={dateFilters.start_date} onChange={(e) => { const next = { ...dateFilters, start_date: e.target.value }; setDateFilters(next); handleSearchTermChange(searchTerm, next); }} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #d1d5db' }} />
                 </div>
                 <span style={{ color: '#6b7280' }}>to</span>
                 <div>
-                    <input type="date" value={dateFilters.end_date} onChange={(e) => setDateFilters({ ...dateFilters, end_date: e.target.value })} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #d1d5db' }} />
+                    <input type="date" value={dateFilters.end_date} onChange={(e) => { const next = { ...dateFilters, end_date: e.target.value }; setDateFilters(next); handleSearchTermChange(searchTerm, next); }} style={{ padding: '6px 10px', borderRadius: '4px', border: '1px solid #d1d5db' }} />
                 </div>
                 {(dateFilters.start_date || dateFilters.end_date) && (
-                    <button onClick={() => setDateFilters({ start_date: '', end_date: '' })} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Clear Dates</button>
+                    <button onClick={() => { const next = { start_date: '', end_date: '' }; setDateFilters(next); handleSearchTermChange(searchTerm, next); }} style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}>Clear Dates</button>
                 )}
             </div>
 

@@ -28,6 +28,17 @@ class DispatchViewSet(viewsets.ModelViewSet):
             is_short_closed=False
         ).select_related('company', 'client', 'part', 'production_report').prefetch_related('dispatch_history')
 
+        search_filters = {
+            'po_number': 'po_number__icontains',
+            'part': 'part__name__icontains',
+            'client': 'client__name__icontains',
+            'status': 'status',
+        }
+        for parameter, lookup in search_filters.items():
+            value = request.query_params.get(parameter)
+            if value:
+                orders = orders.filter(**{lookup: value})
+
         page = self.paginate_queryset(orders)
         if page is not None:
             serializer = DashboardOrderSerializer(page, many=True)
@@ -103,6 +114,9 @@ class DispatchViewSet(viewsets.ModelViewSet):
         company_name = request.query_params.get('company')
         start_date = request.query_params.get('start_date')
         end_date = request.query_params.get('end_date')
+        po_number = request.query_params.get('po_number')
+        part_name = request.query_params.get('part')
+        dispatched_by = request.query_params.get('dispatched_by')
 
         queryset = DispatchHistory.objects.filter(parent_dispatch__isnull=True).select_related('order', 'dispatched_by')
 
@@ -110,6 +124,12 @@ class DispatchViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(client_name__icontains=client_name)
         if company_name:
             queryset = queryset.filter(company_name__icontains=company_name)
+        if po_number:
+            queryset = queryset.filter(po_number__icontains=po_number)
+        if part_name:
+            queryset = queryset.filter(part_name__icontains=part_name)
+        if dispatched_by:
+            queryset = queryset.filter(dispatched_by__username__icontains=dispatched_by)
         if start_date:
             queryset = queryset.filter(dispatched_at__date__gte=start_date)
         if end_date:

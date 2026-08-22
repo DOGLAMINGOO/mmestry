@@ -38,13 +38,26 @@ class ProductionReportPagination(PageNumberPagination):
 class ProductionReportViewSet(viewsets.ModelViewSet):
     # Ensure we don't return production reports for soft-deleted or dispatched customer orders
     def get_queryset(self):
-        return ProductionReport.objects.filter(
+        queryset = ProductionReport.objects.filter(
             customer_order__is_deleted=False
         ).exclude(
             Q(customer_order__status='DISPATCHED') |
             Q(customer_order__status='CLOSED') |
             Q(customer_order__is_short_closed=True)
         ).select_related('customer_order', 'created_by', 'last_edited_by')
+        filters = {
+            'po_number': 'customer_order__po_number__icontains',
+            'part': 'customer_order__part__name__icontains',
+            'machine': 'machine_name__icontains',
+            'operator': 'operator_name__icontains',
+            'status': 'status',
+            'job_rating': 'job_rating',
+        }
+        for parameter, lookup in filters.items():
+            value = self.request.query_params.get(parameter)
+            if value:
+                queryset = queryset.filter(**{lookup: value})
+        return queryset
 
     serializer_class = ProductionReportSerializer
     permission_classes = [IsAdminOrStockManagerForWrite]
@@ -190,6 +203,8 @@ class ProductionReportViewSet(viewsets.ModelViewSet):
         po_number = request.query_params.get('po_number')
         status_filter = request.query_params.get('status')
         machine_name = request.query_params.get('machine_name')
+        part_name = request.query_params.get('part')
+        operator_name = request.query_params.get('operator_name')
 
         if po_number:
             queryset = queryset.filter(customer_order__po_number__icontains=po_number)
@@ -197,6 +212,10 @@ class ProductionReportViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status=status_filter)
         if machine_name:
             queryset = queryset.filter(machine_name__icontains=machine_name)
+        if part_name:
+            queryset = queryset.filter(customer_order__part__name__icontains=part_name)
+        if operator_name:
+            queryset = queryset.filter(operator_name__icontains=operator_name)
 
         page = self.paginate_queryset(queryset)
         if page is not None:

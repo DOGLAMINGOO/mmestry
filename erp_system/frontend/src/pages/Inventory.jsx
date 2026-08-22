@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
 import PaginationControls from '../components/PaginationControls';
+import { fetchAllPages } from '../utils/fetchAllPages';
 import '../styles/Inventory.css'
 
 function Inventory() {
@@ -12,6 +13,7 @@ function Inventory() {
     const [error, setError] = useState(null);
     const [companies, setCompanies] = useState([]);
     const [parts, setParts] = useState([]);
+    const [allInventory, setAllInventory] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
     const [page, setPage] = useState(1);
 
@@ -32,6 +34,7 @@ function Inventory() {
 
     useEffect(() => {
         fetchInventory();
+        fetchAllPages('/api/inventory/?page=1').then(setAllInventory).catch(() => {});
         getCompanies();
         getParts();
     }, []);
@@ -42,8 +45,8 @@ function Inventory() {
 
     const getCompanies = async () => {
         try {
-            const response = await api.get('/api/companies/');
-            setCompanies(normalizeListData(response.data));
+            const records = await fetchAllPages('/api/companies/?page=1');
+            setCompanies(normalizeListData(records));
         } catch (err) {
             console.error('Failed to fetch companies:', err);
         }
@@ -51,8 +54,8 @@ function Inventory() {
 
     const getParts = async () => {
         try {
-            const response = await api.get('/api/parts/');
-            setParts(normalizeListData(response.data));
+            const records = await fetchAllPages('/api/parts/?page=1');
+            setParts(normalizeListData(records));
         } catch (err) {
             console.error('Failed to fetch parts:', err);
         }
@@ -216,9 +219,15 @@ function Inventory() {
 
     // Calculate unique options for the selected search field dropdown
     const getSearchOptions = () => {
-        if (!inventory || !searchField) return [];
-        const uniqueValues = [...new Set(inventory.map(o => o[searchField.value]))].filter(Boolean);
+        if (!allInventory || !searchField) return [];
+        const uniqueValues = [...new Set(allInventory.map(o => o[searchField.value]))].filter(Boolean);
         return uniqueValues.map(val => ({ value: val, label: val }));
+    };
+
+    const handleSearchTermChange = (selected) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (selected) params.set(searchField.value === 'company_name' ? 'company' : 'part', selected.value);
+        fetchInventory(`/api/inventory/?${params.toString()}`);
     };
 
     // Derived state for the filtered table
@@ -295,6 +304,7 @@ function Inventory() {
                         onChange={(selected) => {
                             setSearchField(selected);
                             setSearchTerm(null);
+                            fetchInventory('/api/inventory/?page=1');
                         }}
                         options={[
                             { value: 'company_name', label: 'Company' },
@@ -308,7 +318,10 @@ function Inventory() {
                     </label>
                     <Select
                         value={searchTerm}
-                        onChange={(selected) => setSearchTerm(selected)}
+                        onChange={(selected) => {
+                            setSearchTerm(selected);
+                            handleSearchTermChange(selected);
+                        }}
                         options={getSearchOptions()}
                         placeholder={`Start typing ${searchField.label.toLowerCase()} to filter...`}
                         isClearable
@@ -319,6 +332,7 @@ function Inventory() {
                         onClick={() => {
                             setSearchTerm(null);
                             setSearchField({ value: 'part_name', label: 'Part' });
+                            fetchInventory('/api/inventory/?page=1');
                         }}
                         style={{
                             marginTop: '22px',

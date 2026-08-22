@@ -49,12 +49,27 @@ class CustomerOrderListCreateView(generics.ListCreateAPIView):
 
         status = self.request.query_params.get("status")
         status_in = self.request.query_params.get("status__in")
+        po_number = self.request.query_params.get("po_number")
+        company = self.request.query_params.get("company")
+        client = self.request.query_params.get("client")
+        part = self.request.query_params.get("part")
+        priority = self.request.query_params.get("priority")
         if status_in:
             statuses = [value.strip() for value in status_in.split(",") if value.strip()]
             if statuses:
                 queryset = queryset.filter(status__in=statuses)
         elif status:
             queryset = queryset.filter(status=status)
+        if po_number:
+            queryset = queryset.filter(po_number__icontains=po_number)
+        if company:
+            queryset = queryset.filter(company__name__icontains=company)
+        if client:
+            queryset = queryset.filter(client__name__icontains=client)
+        if part:
+            queryset = queryset.filter(part__name__icontains=part)
+        if priority:
+            queryset = queryset.filter(priority=priority)
 
         return queryset
 

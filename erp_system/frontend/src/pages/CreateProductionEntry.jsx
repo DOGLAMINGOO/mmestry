@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 function CreateProductionEntry() {
     const { id: customerOrderId } = useParams();
@@ -30,14 +31,14 @@ function CreateProductionEntry() {
             try {
                 const [orderRes, machRes, opRes] = await Promise.all([
                     api.get(`/api/customer-orders/${customerOrderId}/`),
-                    api.get('/api/machines/'),
-                    api.get('/api/operators/')
+                    fetchAllPages('/api/machines/?page=1'),
+                    fetchAllPages('/api/operators/?page=1')
                 ]);
                 setOrder(orderRes.data);
                 
                 // Map to react-select options format { value, label }
-                setMachines(normalizeListData(machRes.data).map(m => ({ value: m.name, label: m.name })));
-                setOperators(normalizeListData(opRes.data).map(o => ({ value: o.name, label: o.name })));
+                setMachines(normalizeListData(machRes).map(m => ({ value: m.name, label: m.name })));
+                setOperators(normalizeListData(opRes).map(o => ({ value: o.name, label: o.name })));
 
             } catch (err) {
                 console.error("Failed to load setup data", err);

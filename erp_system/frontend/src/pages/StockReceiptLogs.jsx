@@ -4,6 +4,7 @@ import api from '../api';
 import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 const historyButtonStyle = {
     background: '#4b5563',
@@ -28,6 +29,7 @@ const FIELD_OPTIONS = [
 function StockReceiptLogs() {
     const navigate = useNavigate();
     const [receipts, setReceipts] = useState([]);
+    const [allReceipts, setAllReceipts] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -38,6 +40,7 @@ function StockReceiptLogs() {
     useEffect(() => {
         document.title = 'Stock Receipt Logs - MMestry';
         fetchReceipts();
+        fetchAllPages('/api/inventory/stock-receipts/?page=1').then(setAllReceipts).catch(() => {});
     }, []);
 
     const getPageFromUrl = (url) => {
@@ -75,9 +78,15 @@ function StockReceiptLogs() {
     };
 
     const getSearchOptions = () => {
-        if (!receipts.length) return [];
-        const uniqueValues = [...new Set(receipts.map((r) => r[searchField.value]))].filter(Boolean);
+        if (!allReceipts.length) return [];
+        const uniqueValues = [...new Set(allReceipts.map((r) => r[searchField.value]))].filter(Boolean);
         return uniqueValues.map((val) => ({ value: val, label: val }));
+    };
+
+    const handleSearchTermChange = (selected) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (selected) params.set(searchField.value === 'company_name' ? 'company' : searchField.value === 'part_name' ? 'part' : searchField.value === 'received_by_username' ? 'received_by' : searchField.value, selected.value);
+        fetchReceipts(`/api/inventory/stock-receipts/?${params.toString()}`);
     };
 
     const filteredReceipts = useMemo(() => {
@@ -102,6 +111,7 @@ function StockReceiptLogs() {
                     fieldOptions={FIELD_OPTIONS}
                     getSearchOptions={getSearchOptions}
                     defaultField={DEFAULT_FIELD}
+                    onSearchTermChange={handleSearchTermChange}
                 />
             )}
 
@@ -142,7 +152,7 @@ function StockReceiptLogs() {
                 </table>
             </div>
 
-            {pagination.count > 0 && !searchTerm && (
+            {pagination.count > 0 && (
                 <PaginationControls
                     count={pagination.count}
                     next={pagination.next}
@@ -151,12 +161,6 @@ function StockReceiptLogs() {
                     onPrevious={() => fetchReceipts(pagination.previous)}
                     onNext={() => fetchReceipts(pagination.next)}
                 />
-            )}
-
-            {searchTerm && (
-                <div style={{ marginTop: 20, color: '#475569' }}>
-                    Showing {filteredReceipts.length} of {receipts.length} loaded records
-                </div>
             )}
 
             {selectedRecord && (

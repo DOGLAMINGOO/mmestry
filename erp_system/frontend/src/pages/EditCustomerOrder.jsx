@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
 import '../styles/Inventory.css';
+import { fetchAllPages } from '../utils/fetchAllPages';
 import { loadDraft, useSaveDraft, clearDraft } from '../hooks/useFormDraft';
 
 function EditCustomerOrder() {
@@ -46,15 +47,15 @@ function EditCustomerOrder() {
             try {
                 // Fetch selection options & user role
                 const [companiesRes, clientsRes, partsRes, userRes] = await Promise.all([
-                    api.get('/api/companies/'),
-                    api.get('/api/clients/'),
-                    api.get('/api/parts/'),
+                    fetchAllPages('/api/companies/?page=1'),
+                    fetchAllPages('/api/clients/?page=1'),
+                    fetchAllPages('/api/parts/?page=1'),
                     api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
 
-                setCompanies(normalizeListData(companiesRes.data));
-                setClients(normalizeListData(clientsRes.data));
-                setParts(normalizeListData(partsRes.data));
+                setCompanies(normalizeListData(companiesRes));
+                setClients(normalizeListData(clientsRes));
+                setParts(normalizeListData(partsRes));
                 setUserRole(userRes.data.role);
 
                 // Fetch existing order data

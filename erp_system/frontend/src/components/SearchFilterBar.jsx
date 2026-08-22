@@ -33,6 +33,7 @@ function SearchFilterBar({
     fieldOptions,
     getSearchOptions,
     defaultField,
+    onSearchTermChange,
 }) {
     const showClear = searchTerm || searchField.value !== defaultField.value;
 
@@ -47,6 +48,7 @@ function SearchFilterBar({
                     onChange={(selected) => {
                         setSearchField(selected);
                         setSearchTerm(null);
+                        onSearchTermChange?.(null);
                     }}
                     options={fieldOptions}
                 />
@@ -57,7 +59,10 @@ function SearchFilterBar({
                 </label>
                 <Select
                     value={searchTerm}
-                    onChange={(selected) => setSearchTerm(selected)}
+                    onChange={(selected) => {
+                        setSearchTerm(selected);
+                        onSearchTermChange?.(selected);
+                    }}
                     options={getSearchOptions()}
                     placeholder={`Start typing ${searchField.label.toLowerCase()} to filter...`}
                     isClearable
@@ -69,6 +74,7 @@ function SearchFilterBar({
                     onClick={() => {
                         setSearchTerm(null);
                         setSearchField(defaultField);
+                        onSearchTermChange?.(null);
                     }}
                     style={clearButtonStyle}
                 >

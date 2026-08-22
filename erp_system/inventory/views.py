@@ -61,6 +61,21 @@ class StockReceiptListCreateView(generics.ListCreateAPIView):
             return [IsAuthenticated()]
         return [IsAuthenticated(), CanAdjustInventory()]
 
+    def get_queryset(self):
+        queryset = self.queryset
+        filters = {
+            "company": "company__name__icontains",
+            "part": "part__name__icontains",
+            "invoice_number": "invoice_number__icontains",
+            "supplier_name": "supplier_name__icontains",
+            "received_by": "received_by__username__icontains",
+        }
+        for parameter, lookup in filters.items():
+            value = self.request.query_params.get(parameter)
+            if value:
+                queryset = queryset.filter(**{lookup: value})
+        return queryset
+
     def perform_create(self, serializer):
         user = self.request.user
         receipt = serializer.save(received_by=user)
@@ -106,7 +121,7 @@ class InventoryView(generics.ListAPIView):
         )
         reserved_blanks = Coalesce(Subquery(reserved_blanks_qs, output_field=IntegerField()), Value(0))
 
-        return (
+        queryset = (
             Inventory.objects.all()
             .annotate(
                 last_adjusted_at=last_adjusted_at, 
@@ -115,6 +130,13 @@ class InventoryView(generics.ListAPIView):
             )
             .select_related("company", "part")
         )
+        company = self.request.query_params.get("company")
+        part = self.request.query_params.get("part")
+        if company:
+            queryset = queryset.filter(company__name__icontains=company)
+        if part:
+            queryset = queryset.filter(part__name__icontains=part)
+        return queryset
 
 
 class InventoryReportView(APIView):

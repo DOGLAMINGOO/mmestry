@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Select from 'react-select';
 import api from '../api';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 function EditProductionEntry() {
     const { id } = useParams();
@@ -47,15 +48,15 @@ function EditProductionEntry() {
             try {
                 const [reportRes, machRes, opRes, userRes] = await Promise.all([
                     api.get(`/api/production-reports/${id}/`),
-                    api.get('/api/machines/'),
-                    api.get('/api/operators/'),
+                    fetchAllPages('/api/machines/?page=1'),
+                    fetchAllPages('/api/operators/?page=1'),
                     api.get('/api/user/me/').catch(() => ({ data: { role: null } }))
                 ]);
                 
                 const data = reportRes.data;
                 setReport(data);
-                setMachines(normalizeListData(machRes.data).map(m => ({ value: m.name, label: m.name })));
-                setOperators(normalizeListData(opRes.data).map(o => ({ value: o.name, label: o.name })));
+                setMachines(normalizeListData(machRes).map(m => ({ value: m.name, label: m.name })));
+                setOperators(normalizeListData(opRes).map(o => ({ value: o.name, label: o.name })));
                 setUserRole(userRes.data.role || null);
                 
                 setForm({

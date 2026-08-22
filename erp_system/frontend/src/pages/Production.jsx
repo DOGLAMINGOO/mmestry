@@ -6,6 +6,7 @@ import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import { parsePaginatedResponse } from '../utils/pagination';
 import '../styles/Inventory.css';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 const QUEUE_DEFAULT_FIELD = { value: 'po_number', label: 'PO Number' };
 const REPORTS_DEFAULT_FIELD = { value: 'po_number', label: 'PO Number' };
@@ -141,6 +142,8 @@ function Production() {
     const [loadingAuth, setLoadingAuth] = useState(true);
     const [approvedOrders, setApprovedOrders] = useState([]);
     const [reports, setReports] = useState([]);
+    const [allApprovedOrders, setAllApprovedOrders] = useState([]);
+    const [allReports, setAllReports] = useState([]);
     const [queuePagination, setQueuePagination] = useState({ next: null, previous: null, count: 0 });
     const [reportsPagination, setReportsPagination] = useState({ next: null, previous: null, count: 0 });
     const [queuePage, setQueuePage] = useState(1);
@@ -166,6 +169,8 @@ function Production() {
         initializeDashboard();
         fetchQueue();
         fetchReports();
+        fetchAllPages('/api/customer-orders/?status__in=APPROVED,IN_PRODUCTION&page=1').then(setAllApprovedOrders).catch(() => {});
+        fetchAllPages('/api/production-reports/?page=1').then(setAllReports).catch(() => {});
     }, []);
 
     const fetchQueue = async (url) => {
@@ -199,20 +204,32 @@ function Production() {
     }, []);
 
     const getQueueSearchOptions = () => {
-        if (!approvedOrders.length) return [];
-        const uniqueValues = [...new Set(approvedOrders.map((o) => o[queueSearchField.value]))].filter(Boolean);
+        if (!allApprovedOrders.length) return [];
+        const uniqueValues = [...new Set(allApprovedOrders.map((o) => o[queueSearchField.value]))].filter(Boolean);
         return uniqueValues.map((val) => ({ value: val, label: val }));
     };
 
     const getReportsSearchOptions = () => {
-        if (!reports.length) return [];
+        if (!allReports.length) return [];
         const uniqueValues = [
-            ...new Set(reports.map((r) => getReportFieldValue(r, reportsSearchField.value))),
+            ...new Set(allReports.map((r) => getReportFieldValue(r, reportsSearchField.value))),
         ].filter(Boolean);
         return uniqueValues.map((val) => ({
             value: val,
             label: reportsSearchField.value === 'status' ? val.replace(/_/g, ' ') : val,
         }));
+    };
+
+    const handleQueueSearch = (selected) => {
+        const params = new URLSearchParams({ status__in: 'APPROVED,IN_PRODUCTION', page: '1' });
+        if (selected) params.set(queueSearchField.value === 'part_name' ? 'part' : queueSearchField.value, selected.value);
+        fetchQueue(`/api/customer-orders/?${params.toString()}`);
+    };
+
+    const handleReportsSearch = (selected) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (selected) params.set(reportsSearchField.value === 'machine_name' ? 'machine' : reportsSearchField.value === 'operator_name' ? 'operator' : reportsSearchField.value, selected.value);
+        fetchReports(`/api/production-reports/?${params.toString()}`);
     };
 
     const filteredApprovedOrders = useMemo(() => {
@@ -276,6 +293,7 @@ function Production() {
                             fieldOptions={QUEUE_FIELD_OPTIONS}
                             getSearchOptions={getQueueSearchOptions}
                             defaultField={QUEUE_DEFAULT_FIELD}
+                            onSearchTermChange={handleQueueSearch}
                         />
                     )}
 
@@ -382,6 +400,7 @@ function Production() {
                             fieldOptions={REPORTS_FIELD_OPTIONS}
                             getSearchOptions={getReportsSearchOptions}
                             defaultField={REPORTS_DEFAULT_FIELD}
+                            onSearchTermChange={handleReportsSearch}
                         />
                     )}
 

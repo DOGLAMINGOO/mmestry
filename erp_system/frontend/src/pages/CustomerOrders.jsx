@@ -4,11 +4,13 @@ import Select from 'react-select';
 import api from '../api';
 import PaginationControls from '../components/PaginationControls';
 import '../styles/Inventory.css';
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 function CustomerOrders() {
     const navigate = useNavigate();
 
     const [orders, setOrders] = useState([]);
+    const [allOrders, setAllOrders] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
     const [ordersError, setOrdersError] = useState(null);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
@@ -73,6 +75,7 @@ function CustomerOrders() {
 
     useEffect(() => {
         fetchOrders();
+        fetchAllPages('/api/customer-orders/?page=1').then(setAllOrders).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -93,9 +96,18 @@ function CustomerOrders() {
 
     // Calculate unique options for the selected search field dropdown
     const getSearchOptions = () => {
-        if (!orders || !searchField) return [];
-        const uniqueValues = [...new Set(orders.map(o => o[searchField.value]))].filter(Boolean);
+        if (!allOrders || !searchField) return [];
+        const uniqueValues = [...new Set(allOrders.map(o => o[searchField.value]))].filter(Boolean);
         return uniqueValues.map(val => ({ value: val, label: val }));
+    };
+
+    const handleSearchTermChange = (selected) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (selected) {
+            const parameter = searchField.value === 'client_name' ? 'client' : searchField.value.endsWith('_name') ? searchField.value.replace('_name', '') : searchField.value;
+            params.set(parameter, selected.value);
+        }
+        fetchOrders(`/api/customer-orders/?${params.toString()}`);
     };
 
     // Derived state for the filtered table
@@ -161,6 +173,7 @@ function CustomerOrders() {
                         onChange={(selected) => {
                             setSearchField(selected);
                             setSearchTerm(null); // Reset specific search term when jumping to a new column
+                            fetchOrders('/api/customer-orders/?page=1');
                         }}
                         options={[
                             { value: 'po_number', label: 'PO Number' },
@@ -177,7 +190,10 @@ function CustomerOrders() {
                     </label>
                     <Select
                         value={searchTerm}
-                        onChange={(selected) => setSearchTerm(selected)}
+                        onChange={(selected) => {
+                            setSearchTerm(selected);
+                            handleSearchTermChange(selected);
+                        }}
                         options={getSearchOptions()}
                         placeholder={`Start typing ${searchField.label.toLowerCase()} to filter...`}
                         isClearable
@@ -188,6 +204,7 @@ function CustomerOrders() {
                         onClick={() => {
                             setSearchTerm(null);
                             setSearchField({ value: 'company_name', label: 'Company' });
+                            fetchOrders('/api/customer-orders/?page=1');
                         }}
                         style={{
                             marginTop: '22px', // Align visually with the inputs accounting for labels

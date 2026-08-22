@@ -4,10 +4,12 @@ import api from '../api';
 import PaginationControls from '../components/PaginationControls';
 import SearchFilterBar from '../components/SearchFilterBar';
 import '../styles/Inventory.css'; 
+import { fetchAllPages } from '../utils/fetchAllPages';
 
 function Dispatch() {
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
+    const [allOrders, setAllOrders] = useState([]);
     const [pagination, setPagination] = useState({ next: null, previous: null, count: 0 });
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -54,6 +56,7 @@ function Dispatch() {
 
     useEffect(() => {
         fetchEligibleOrders();
+        fetchAllPages('/api/dispatch/eligible-orders/?page=1').then(setAllOrders).catch(() => {});
     }, []);
 
     useEffect(() => {
@@ -267,9 +270,15 @@ function Dispatch() {
     ];
 
     const getSearchOptions = () => {
-        if (!orders || !searchField) return [];
-        const uniqueValues = [...new Set(orders.map((order) => order[searchField.value]))].filter(Boolean);
+        if (!allOrders || !searchField) return [];
+        const uniqueValues = [...new Set(allOrders.map((order) => order[searchField.value]))].filter(Boolean);
         return uniqueValues.map((value) => ({ value, label: value }));
+    };
+
+    const handleSearchTermChange = (selected) => {
+        const params = new URLSearchParams({ page: '1' });
+        if (selected) params.set(searchField.value === 'part_name' ? 'part' : searchField.value === 'client_name' ? 'client' : searchField.value, selected.value);
+        fetchEligibleOrders(`/api/dispatch/eligible-orders/?${params.toString()}`);
     };
 
     const filteredOrders = useMemo(() => {
@@ -307,6 +316,7 @@ function Dispatch() {
                 fieldOptions={fieldOptions}
                 getSearchOptions={getSearchOptions}
                 defaultField={{ value: 'po_number', label: 'PO Number' }}
+                onSearchTermChange={handleSearchTermChange}
             />
 
             <div className="inventory-table-wrapper" style={{ marginTop: 20 }}>
